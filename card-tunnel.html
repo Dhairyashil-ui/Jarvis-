@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Card Tunnel - 3D UI Component</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* -------------------------------------------------------------
+       GLOBAL RESET & ROOT VARIABLES
+    ------------------------------------------------------------- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-color: #0b0c10;
+      --dot-color: rgba(255, 255, 255, 0.08);
+      --card-w: 230px;
+      --card-h: 280px;
+      --card-radius: 28px;
+      --tunnel-w: 480px;
+      --tunnel-h: 480px;
+      --perspective: 680px;
+      --sidebar-w: 110px;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      /* Subtle dot grid pattern matching screenshot */
+      background-image: radial-gradient(var(--dot-color) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      background-position: center center;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      display: flex;
+      position: relative;
+    }
+
+    /* -------------------------------------------------------------
+       LEFT COMPONENT NAVIGATION SIDEBAR (Matching Screenshot)
+    ------------------------------------------------------------- */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: rgba(14, 15, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 14px;
+      z-index: 50;
+      position: relative;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px;
+      border-radius: 14px;
+      text-decoration: none;
+      color: #9094a0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      background: #191b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-item.active .nav-icon {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: #20232c;
+    }
+
+    /* -------------------------------------------------------------
+       3D STAGE & TUNNEL PORTAL
+    ------------------------------------------------------------- */
+    .viewport {
+      flex: 1;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    /* Rounded Portal Window matching screenshot */
+    .tunnel-portal {
+      width: clamp(340px, 64vw, 720px);
+      height: clamp(380px, 80vh, 760px);
+      border-radius: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 30px 80px -15px rgba(0, 0, 0, 0.95),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      position: relative;
+      perspective: var(--perspective);
+      perspective-origin: 50% 50%;
+      background: #08090c;
+      cursor: grab;
+    }
+
+    .tunnel-portal:active {
+      cursor: grabbing;
+    }
+
+    /* Tunnel 3D World Container */
+    .tunnel-track {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    /* Far end infinite black void */
+    .tunnel-end-void {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220px;
+      height: 220px;
+      transform: translate(-50%, -50%) translateZ(-2600px);
+      background: #000000;
+      border-radius: 18px;
+      box-shadow: 0 0 80px 60px #000000;
+      pointer-events: none;
+    }
+
+    /* Vignette vignette scrim on portal edges */
+    .portal-vignette {
+      position: absolute;
+      inset: 0;
+      border-radius: 38px;
+      background: radial-gradient(circle at center, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* -------------------------------------------------------------
+       TUNNEL CARD SLOT & INNER
+    ------------------------------------------------------------- */
+    .tunnel-card {
+      position: absolute;
+      left: calc(var(--card-w) / -2);
+      top: calc(var(--card-h) / -2);
+      width: var(--card-w);
+      height: var(--card-h);
+      transform-style: preserve-3d;
+      will-change: transform, filter, opacity;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--card-radius);
+      position: relative;
+      overflow: hidden;
+      background: #14151b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 18px 40px -8px rgba(0, 0, 0, 0.8),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      transition: box-shadow 0.25s ease;
+      filter: brightness(var(--card-brightness, 1));
+      opacity: var(--card-opacity, 1);
+    }
+
+    .tunnel-card:hover .card-inner {
+      box-shadow: 
+        0 25px 60px -6px rgba(0, 0, 0, 0.95),
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        0 0 30px rgba(255, 255, 255, 0.2);
+    }
+
+    .card-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      display: block;
+    }
+
+    .card-sheen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+      border-top-left-radius: var(--card-radius);
+      border-top-right-radius: var(--card-radius);
+    }
+
+    /* -------------------------------------------------------------
+       EXACT CARD STYLES MATCHING TUNNEL SCREENSHOT
+    ------------------------------------------------------------- */
+    /* 1. "Maple Street" Cream Card */
+    .style-cream {
+      background-color: #ede8dc;
+      color: #1e1f1c;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .style-cream .circle-inset {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-bottom: 12px;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+    .style-cream .circle-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .style-cream .cream-text {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: #242422;
+      max-width: 160px;
+    }
+
+    /* 2. Center Man in Grass with Flower Graphic Mask */
+    .center-flower-badge {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 82px;
+      height: 82px;
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6));
+    }
+
+    /* 3. "2026 NOV" Olive Card */
+    .style-nov-photo {
+      background-color: #5c6650;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .style-nov-photo .nov-frame {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .style-nov-photo .nov-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .style-nov-photo .nov-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 0;
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .style-nov-photo .nov-overlay span {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+    }
+
+    /* 4. Semicircles Scalloped Card */
+    .style-scallop {
+      background-color: #e6e9df;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 18px;
+      position: relative;
+    }
+    .scallop-row {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+    .scallop-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #5d674f;
+    }
+
+    /* 5. "north ave" Olive Card */
+    .style-olive {
+      background-color: #5d674f;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+    }
+    .style-olive .photo-inset {
+      width: 100%;
+      height: 155px;
+      background: #f2ede4;
+      border-radius: 16px;
+      padding: 7px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+    .style-olive .photo-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 11px;
+    }
+    .style-olive .olive-footer {
+      margin-top: auto;
+      padding: 4px 6px;
+      text-align: right;
+    }
+    .style-olive .olive-footer h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 19px;
+      font-weight: 700;
+      color: #edebe4;
+      letter-spacing: -0.5px;
+    }
+
+    /* 6. "BARCELONA / SEVILLA" Black Card */
+    .style-barcelona {
+      background-color: #15161b;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 20px;
+      position: relative;
+    }
+    .style-barcelona .barcelona-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: #f0f0f3;
+      text-transform: uppercase;
+    }
+
+    /* 7. "0034 - 0095" Split Card */
+    .style-sage-split {
+      background-color: #dce3d5;
+      color: #222520;
+      position: relative;
+    }
+    .style-sage-split .left-image-half {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 62%;
+      height: 100%;
+      object-fit: cover;
+      mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+    }
+    .style-sage-split .right-numbers {
+      position: absolute;
+      right: 16px;
+      top: 22px;
+      bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #1a1e17;
+    }
+
+    /* 8. "THU / 0316 AVE" Poster Card */
+    .card-overlay-text {
+      position: absolute;
+      inset: 0;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .card-badge {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+    }
+    .card-title-lg {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.8);
+    }
+    .card-gradient-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 40%, rgba(0,0,0,0.65) 100%);
+      pointer-events: none;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM "KEYFRAMES ^" PILL & CONTROL PANEL
+    ------------------------------------------------------------- */
+    .ui-layer {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .keyframes-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px 9px 22px;
+      background: rgba(22, 23, 29, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 9999px;
+      color: #eaecef;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255,255,255,0.06);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .keyframes-pill:hover {
+      background: rgba(30, 32, 40, 0.98);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 35px -5px rgba(0, 0, 0, 0.75);
+    }
+
+    .keyframes-pill .icon-caret {
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .keyframes-pill.active .icon-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      position: absolute;
+      bottom: 66px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.96);
+      width: 440px;
+      max-width: calc(100vw - 32px);
+      background: rgba(18, 19, 25, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.88);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 99;
+    }
+
+    .controls-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-header h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h4 span {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #aaa;
+      font-weight: 500;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      color: #c0c4ce;
+    }
+
+    .control-row input[type="range"] {
+      width: 170px;
+      accent-color: #ffffff;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: #eee;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      color: #0b0c10;
+      border-color: #ffffff;
+    }
+
+    .btn.primary:hover {
+      background: #e4e6ea;
+    }
+
+    .image-manager {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .image-manager textarea {
+      width: 100%;
+      height: 64px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #eee;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      margin-top: 6px;
+      outline: none;
+    }
+
+    .hint-text {
+      font-size: 10.5px;
+      color: #7b808d;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .top-hint {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      :root {
+        --card-w: 180px;
+        --card-h: 220px;
+        --tunnel-w: 360px;
+        --tunnel-h: 360px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT COMPONENT NAVIGATION SIDEBAR -->
+  <aside class="sidebar">
+    <!-- 0. AI Catalog Hub -->
+    <a href="react-bits-catalog.html" class="nav-item" title="React Bits AI Catalog">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <span>AI Catalog</span>
+    </a>
+
+    <!-- 1. Sphere Wall -->
+    <a href="sphere-wall.html" class="nav-item" title="Sphere Wall">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="5" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="4" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="4" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="5" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+        </svg>
+      </div>
+      <span>Sphere Wall</span>
+    </a>
+
+    <!-- 2. Ring Carousel -->
+    <a href="ring-carousel.html" class="nav-item" title="Ring Carousel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <ellipse cx="24" cy="24" rx="18" ry="10" stroke="#777" stroke-width="2" stroke-dasharray="3 3"/>
+          <rect x="19" y="28" width="10" height="12" rx="2.5" fill="#fff"/>
+          <rect x="6" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="33" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="12" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+          <rect x="29" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+        </svg>
+      </div>
+      <span>Ring Carousel</span>
+    </a>
+
+    <!-- 3. Orbit Globe -->
+    <a href="orbit-globe.html" class="nav-item" title="Orbit Globe">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="14" stroke="#888" stroke-width="1.5"/>
+          <rect x="18" y="18" width="12" height="12" rx="3" fill="#fff" transform="rotate(15 24 24)"/>
+          <rect x="7" y="14" width="9" height="9" rx="2" fill="#aaa" transform="rotate(-20 11.5 18.5)"/>
+          <rect x="30" y="26" width="9" height="9" rx="2" fill="#ccc" transform="rotate(35 34.5 30.5)"/>
+        </svg>
+      </div>
+      <span>Orbit Globe</span>
+    </a>
+
+    <!-- 4. Totem Wall -->
+    <div class="nav-item" title="Totem Wall (Coming Soon)">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="8" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="8" y="32" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="20" y="2" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="20" y="17" width="8" height="13" rx="2" fill="#fff"/>
+          <rect x="20" y="33" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="32" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="32" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="32" y="32" width="8" height="11" rx="2" fill="#777"/>
+        </svg>
+      </div>
+      <span>Totem Wall</span>
+    </div>
+
+    <!-- 5. Card Tunnel (Active) -->
+    <a href="card-tunnel.html" class="nav-item active" title="Card Tunnel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="4" y="4" width="40" height="40" rx="3" stroke="#888" stroke-width="1.8"/>
+          <rect x="12" y="12" width="24" height="24" rx="2" stroke="#bbb" stroke-width="1.8"/>
+          <rect x="19" y="19" width="10" height="10" rx="1.5" fill="#fff"/>
+          <line x1="4" y1="4" x2="19" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="4" x2="29" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="4" y1="44" x2="19" y2="29" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="44" x2="29" y2="29" stroke="#888" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span>Card Tunnel</span>
+    </a>
+
+    <!-- 6. Spiral Stream -->
+    <a href="spiral-stream.html" class="nav-item" title="Spiral Stream">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <path d="M12 10 C 28 8, 36 14, 36 20 C 36 26, 12 24, 12 30 C 12 36, 28 40, 36 38" stroke="#888" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="10" y="18" width="8" height="11" rx="2" fill="#fff" transform="rotate(-12 14 23)"/>
+          <rect x="28" y="24" width="8" height="11" rx="2" fill="#888" transform="rotate(12 32 29)"/>
+          <rect x="22" y="8" width="8" height="11" rx="2" fill="#555" transform="rotate(6 26 13)"/>
+        </svg>
+      </div>
+      <span>Spiral Stream</span>
+    </a>
+  </aside>
+
+  <!-- TOP INSTRUCTION HINT -->
+  <div class="top-hint">
+    <span>Scroll or drag up/down to fly through 3D tunnel</span>
+    <span>•</span>
+    <span>Click any card to inspect</span>
+  </div>
+
+  <!-- 3D INTERACTIVE TUNNEL VIEWPORT -->
+  <main class="viewport" id="viewport">
+    <div class="tunnel-portal" id="tunnelPortal">
+      <div class="portal-vignette"></div>
+      <div class="tunnel-track" id="tunnelTrack">
+        <!-- Far End Dark Void -->
+        <div class="tunnel-end-void"></div>
+        <!-- 40 Cards on 4 walls injected dynamically via JavaScript -->
+      </div>
+    </div>
+  </main>
+
+  <!-- BOTTOM UI LAYER WITH KEYFRAMES PILL -->
+  <div class="ui-layer">
+    <button class="keyframes-pill" id="keyframesToggle" aria-label="Toggle Tunnel Controls">
+      <span>Keyframes</span>
+      <span class="icon-caret">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- CONTROLS PANEL DRAWER -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="panel-header">
+      <h4>Card Tunnel <span>3D Tunnel Engine</span></h4>
+      <button id="closePanelBtn" style="background:none; border:none; color:#777; cursor:pointer; font-size:16px;">✕</button>
+    </div>
+
+    <div class="control-row">
+      <label for="speedSlider">Flythrough Speed</label>
+      <input type="range" id="speedSlider" min="-12" max="12" step="0.5" value="2.5">
+    </div>
+
+    <div class="control-row">
+      <label for="spacingSlider">Card Spacing (Z)</label>
+      <input type="range" id="spacingSlider" min="200" max="450" step="10" value="290">
+    </div>
+
+    <div class="control-row">
+      <label for="tunnelSizeSlider">Tunnel Width/Height</label>
+      <input type="range" id="tunnelSizeSlider" min="360" max="640" step="20" value="480">
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="playPauseBtn">⏸ Pause</button>
+      <button class="btn" id="reverseBtn">⇄ Reverse</button>
+      <button class="btn" id="toggleStyleBtn">🎨 Toggle Style</button>
+    </div>
+
+    <div class="image-manager">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="font-size:12px; font-weight:600; color:#eee;">Update Images (Paste URLs)</label>
+        <span style="font-size:10px; color:#aaa;" id="cardCountLabel">40 cards</span>
+      </div>
+      <textarea id="imageInputArea" placeholder="Enter image URLs separated by commas or new lines..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="applyImagesBtn" style="flex:2;">Apply Images</button>
+        <button class="btn" id="presetMatchBtn" style="flex:1;">Exact Preset</button>
+      </div>
+      <p class="hint-text">💡 Or change the <code>const IMAGES = [...]</code> array in code on line 890!</p>
+    </div>
+  </div>
+
+  <!-- SVG Definition for Center Flower Mask Icon -->
+  <svg style="display:none;">
+    <defs>
+      <g id="flower-mask-icon">
+        <g fill="#f5f0e6">
+          <circle cx="50" cy="22" r="9"/>
+          <circle cx="70" cy="30" r="9"/>
+          <circle cx="78" cy="50" r="9"/>
+          <circle cx="70" cy="70" r="9"/>
+          <circle cx="50" cy="78" r="9"/>
+          <circle cx="30" cy="70" r="9"/>
+          <circle cx="22" cy="50" r="9"/>
+          <circle cx="30" cy="30" r="9"/>
+          <circle cx="50" cy="50" r="14"/>
+          <circle cx="42" cy="38" r="9"/>
+          <circle cx="58" cy="38" r="9"/>
+          <circle cx="42" cy="62" r="9"/>
+          <circle cx="58" cy="62" r="9"/>
+        </g>
+        <circle cx="50" cy="50" r="3.5" fill="#202124"/>
+        <circle cx="42" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="42" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="26" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="74" r="2.8" fill="#202124"/>
+        <circle cx="26" cy="50" r="2.8" fill="#202124"/>
+        <circle cx="74" cy="50" r="2.8" fill="#202124"/>
+      </g>
+    </defs>
+  </svg>
+
+  <script>
+    // =========================================================================
+    // 🌟 1-LINE IMAGE CONFIG: CHANGE YOUR IMAGES HERE!
+    // Paste ANY image URLs (local paths or web links) into this array:
+    // =========================================================================
+    const IMAGES = [
+      "assets/portrait_center.jpg",
+      "assets/flower_macro.jpg",
+      "assets/madrid_arch.jpg",
+      "assets/poppy_field.jpg",
+      "assets/moody_portrait.jpg",
+      "assets/forest_moss.jpg",
+      "assets/mountain_sky.jpg",
+      "assets/warm_flower.jpg",
+      "assets/meadow_flowers.jpg"
+    ];
+
+    // =========================================================================
+    // EXACT SCREENSHOT TEMPLATES FOR CARD TUNNEL
+    // =========================================================================
+    const TUNNEL_TEMPLATES = [
+      {
+        type: "cream-maple",
+        image: "assets/warm_flower.jpg",
+        text: "Maple Street is a lovely avenue with lush trees"
+      },
+      {
+        type: "center-man",
+        image: "assets/portrait_center.jpg"
+      },
+      {
+        type: "nov-card",
+        image: "assets/poppy_field.jpg",
+        year: "2026",
+        month: "NOV"
+      },
+      {
+        type: "thu-0316",
+        image: "assets/poppy_field.jpg",
+        badge: "THU",
+        title: "0316 AVE"
+      },
+      {
+        type: "scallop"
+      },
+      {
+        type: "north-ave",
+        image: "assets/meadow_flowers.jpg",
+        title: "north ave"
+      },
+      {
+        type: "barcelona",
+        title: "BARCELONA",
+        subtitle: "SEVILLA"
+      },
+      {
+        type: "sage-split",
+        image: "assets/flower_macro.jpg",
+        numTop: "0034",
+        numBottom: "0095"
+      }
+    ];
+
+    // =========================================================================
+    // STATE & CONFIGURATION
+    // =========================================================================
+    let currentImages = [...IMAGES];
+    let isEditorialMode = true;
+    let flySpeed = 2.4;
+    let isFlying = true;
+    let cardSpacingZ = 290;
+    let tunnelDimension = 480; // width and height of cross section
+    let zCam = 0;
+    let targetZCam = 0;
+    let velZ = 0;
+    let isDragging = false;
+    let lastY = 0;
+    let lastTime = 0;
+
+    // Subtle parallax tilt
+    let tiltX = 0;
+    let tiltY = 0;
+    let targetTiltX = 0;
+    let targetTiltY = 0;
+
+    // Number of rings along Z corridor
+    const RING_COUNT = 10;
+    const TOTAL_LENGTH = RING_COUNT * cardSpacingZ;
+
+    // DOM Elements
+    const portal = document.getElementById('tunnelPortal');
+    const tunnelTrack = document.getElementById('tunnelTrack');
+    const keyframesToggle = document.getElementById('keyframesToggle');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const spacingSlider = document.getElementById('spacingSlider');
+    const tunnelSizeSlider = document.getElementById('tunnelSizeSlider');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const reverseBtn = document.getElementById('reverseBtn');
+    const toggleStyleBtn = document.getElementById('toggleStyleBtn');
+    const imageInputArea = document.getElementById('imageInputArea');
+    const applyImagesBtn = document.getElementById('applyImagesBtn');
+    const presetMatchBtn = document.getElementById('presetMatchBtn');
+    const cardCountLabel = document.getElementById('cardCountLabel');
+
+    let tunnelCards = [];
+
+    // =========================================================================
+    // BUILD 3D CARD TUNNEL
+    // =========================================================================
+    function buildTunnel() {
+      // Remove previous cards except end void
+      const endVoid = tunnelTrack.querySelector('.tunnel-end-void');
+      tunnelTrack.innerHTML = '';
+      if (endVoid) tunnelTrack.appendChild(endVoid);
+
+      tunnelCards = [];
+      const halfSize = tunnelDimension / 2;
+      let cardCounter = 0;
+
+      // 4 walls: 0: Floor, 1: Ceiling, 2: Left Wall, 3: Right Wall
+      const WALLS = [
+        { name: "floor",   rotX: 90,  rotY: 0,   rotZ: 0,   tx: 0,         ty: halfSize,  tz: 0 },
+        { name: "ceiling", rotX: -90, rotY: 0,   rotZ: 180, tx: 0,         ty: -halfSize, tz: 0 },
+        { name: "left",    rotX: 0,   rotY: 90,  rotZ: 0,   tx: -halfSize, ty: 0,         tz: 0 },
+        { name: "right",   rotX: 0,   rotY: -90, rotZ: 0,   tx: halfSize,  ty: 0,         tz: 0 }
+      ];
+
+      for (let ring = 0; ring < RING_COUNT; ring++) {
+        const baseZ = -ring * cardSpacingZ;
+
+        WALLS.forEach((wall, wallIdx) => {
+          const card = document.createElement('div');
+          card.className = 'tunnel-card';
+          card.dataset.ring = ring;
+          card.dataset.wall = wall.name;
+          card.dataset.baseZ = baseZ;
+
+          const inner = document.createElement('div');
+          inner.className = 'card-inner';
+
+          const templateIdx = (ring * 4 + wallIdx) % TUNNEL_TEMPLATES.length;
+          const template = TUNNEL_TEMPLATES[templateIdx];
+          const imageSrc = currentImages[cardCounter % currentImages.length];
+
+          if (isEditorialMode) {
+            renderEditorialCard(inner, template, imageSrc);
+          } else {
+            renderCleanCard(inner, imageSrc, cardCounter);
+          }
+
+          card.appendChild(inner);
+
+          tunnelTrack.appendChild(card);
+          tunnelCards.push({
+            el: card,
+            inner: inner,
+            wall: wall,
+            baseZ: baseZ,
+            ringIndex: ring
+          });
+
+          cardCounter++;
+        });
+      }
+
+      cardCountLabel.textContent = `${tunnelCards.length} cards`;
+      imageInputArea.value = currentImages.join('\n');
+      updateTunnelFrame();
+    }
+
+    // Render Editorial Card
+    function renderEditorialCard(container, template, src) {
+      const actualSrc = src || template.image;
+
+      if (template.type === 'center-man') {
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600'" alt="Center Portrait">
+          <svg class="center-flower-badge" viewBox="0 0 100 100">
+            <use href="#flower-mask-icon" />
+          </svg>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'cream-maple') {
+        container.className = 'card-inner style-cream';
+        container.innerHTML = `
+          <div class="circle-inset">
+            <img src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600'" alt="Circle photo">
+          </div>
+          <div class="cream-text">${template.text}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'nov-card') {
+        container.className = 'card-inner style-nov-photo';
+        container.innerHTML = `
+          <div class="nov-frame">
+            <img src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=600'" alt="2026 NOV">
+            <div class="nov-overlay">
+              <span>${template.year}</span>
+              <span>${template.month}</span>
+            </div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'scallop') {
+        container.className = 'card-inner style-scallop';
+        container.innerHTML = `
+          <div class="scallop-row">
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'north-ave') {
+        container.className = 'card-inner style-olive';
+        container.innerHTML = `
+          <div class="photo-inset">
+            <img src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600'" alt="Meadow flowers">
+          </div>
+          <div class="olive-footer">
+            <h3>${template.title}</h3>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'barcelona') {
+        container.className = 'card-inner style-barcelona';
+        container.innerHTML = `
+          <div class="barcelona-title">${template.title}</div>
+          <div style="font-family:'Space Grotesk'; font-size:12px; letter-spacing:2px; color:#aaa;">${template.subtitle}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'sage-split') {
+        container.className = 'card-inner style-sage-split';
+        container.innerHTML = `
+          <img class="left-image-half" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=600'" alt="Blossom macro">
+          <div class="right-numbers">
+            <span>${template.numTop}</span>
+            <span>-</span>
+            <span>${template.numBottom}</span>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else {
+        // High-end photo poster
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=600'" alt="Photo">
+          <div class="card-gradient-scrim"></div>
+          <div class="card-overlay-text">
+            <div class="card-badge">${template.badge || ''}</div>
+            <div class="card-title-lg">${template.title || ''}</div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+    }
+
+    // Clean Full Photo Mode
+    function renderCleanCard(container, src, index) {
+      container.className = 'card-inner';
+      container.innerHTML = `
+        <img class="card-img" src="${src}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600'" alt="Photo ${index + 1}">
+        <div class="card-sheen"></div>
+      `;
+    }
+
+    // =========================================================================
+    // 3D TUNNEL FLYTHROUGH & INFINITE MODULO LOOP
+    // =========================================================================
+    function updateTunnelFrame() {
+      // Subtle parallax look-around
+      tunnelTrack.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg)`;
+
+      const halfSize = tunnelDimension / 2;
+      const totalLen = RING_COUNT * cardSpacingZ;
+
+      tunnelCards.forEach((item) => {
+        // Compute relative Z with infinite modulo wrapping
+        let relZ = (item.baseZ + zCam) % totalLen;
+        if (relZ > 200) relZ -= totalLen;
+        if (relZ < -totalLen + 200) relZ += totalLen;
+
+        // Position on its respective wall:
+        const w = item.wall;
+        let tx = 0, ty = 0;
+        if (w.name === 'floor')   { ty = halfSize; }
+        if (w.name === 'ceiling') { ty = -halfSize; }
+        if (w.name === 'left')    { tx = -halfSize; }
+        if (w.name === 'right')   { tx = halfSize; }
+
+        item.el.style.transform = `
+          translate3d(${tx}px, ${ty}px, ${relZ.toFixed(1)}px)
+          rotateX(${w.rotX}deg) rotateY(${w.rotY}deg) rotateZ(${w.rotZ}deg)
+        `;
+
+        // Depth fog: cards in front are 100% crisp, far cards fade smoothly into deep dark void
+        const distFromCam = Math.abs(relZ);
+        const depthRatio = Math.max(0, Math.min(1, 1 - (distFromCam / (totalLen * 0.85))));
+
+        const brightness = Math.max(0.12, Math.pow(depthRatio, 1.2));
+        const opacity = Math.max(0.2, depthRatio);
+
+        item.inner.style.setProperty('--card-brightness', brightness.toFixed(3));
+        item.inner.style.setProperty('--card-opacity', opacity.toFixed(3));
+      });
+    }
+
+    // =========================================================================
+    // ANIMATION & PHYSICS LOOP
+    // =========================================================================
+    function animate() {
+      if (!isDragging) {
+        if (isFlying) {
+          targetZCam += flySpeed;
+        }
+
+        // Apply momentum inertia
+        if (Math.abs(velZ) > 0.01) {
+          targetZCam += velZ;
+          velZ *= 0.94;
+        }
+      }
+
+      // Smooth camera interpolation
+      zCam += (targetZCam - zCam) * 0.14;
+
+      // Parallax easing
+      tiltX += (targetTiltX - tiltX) * 0.08;
+      tiltY += (targetTiltY - tiltY) * 0.08;
+
+      updateTunnelFrame();
+      requestAnimationFrame(animate);
+    }
+
+    // =========================================================================
+    // INTERACTIVE GESTURES (DRAG & MOUSE FLYTHROUGH)
+    // =========================================================================
+    portal.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.controls-panel') || e.target.closest('.ui-layer')) return;
+
+      isDragging = true;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      velZ = 0;
+      portal.setPointerCapture(e.pointerId);
+    });
+
+    portal.addEventListener('pointermove', (e) => {
+      // Subtle parallax look towards mouse
+      const rect = portal.getBoundingClientRect();
+      const mouseRelX = (e.clientX - rect.left) / rect.width - 0.5;
+      const mouseRelY = (e.clientY - rect.top) / rect.height - 0.5;
+      targetTiltY = mouseRelX * 12;
+      targetTiltX = -mouseRelY * 12;
+
+      if (!isDragging) return;
+
+      const now = performance.now();
+      const dt = Math.max(1, now - lastTime);
+      const dy = e.clientY - lastY;
+
+      // Drag up/down moves forward/backward
+      const dragSensitivity = 2.4;
+      targetZCam -= dy * dragSensitivity;
+      zCam = targetZCam;
+
+      velZ = -(dy / dt) * 16;
+
+      lastY = e.clientY;
+      lastTime = now;
+      updateTunnelFrame();
+    });
+
+    function endDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try { portal.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+
+    portal.addEventListener('pointerup', endDrag);
+    portal.addEventListener('pointercancel', endDrag);
+
+    // Mouse wheel controls forward/backward speed
+    window.addEventListener('wheel', (e) => {
+      if (e.target.closest('.controls-panel')) return;
+      e.preventDefault();
+      targetZCam -= Math.sign(e.deltaY) * 35;
+    }, { passive: false });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowUp' || e.key === 'w') {
+        targetZCam += 40;
+      } else if (e.key === 'ArrowDown' || e.key === 's') {
+        targetZCam -= 40;
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    });
+
+    // =========================================================================
+    // UI CONTROLS & "KEYFRAMES ^" TOGGLE
+    // =========================================================================
+    keyframesToggle.addEventListener('click', () => {
+      const isOpen = controlsPanel.classList.toggle('open');
+      keyframesToggle.classList.toggle('active', isOpen);
+    });
+
+    closePanelBtn.addEventListener('click', () => {
+      controlsPanel.classList.remove('open');
+      keyframesToggle.classList.remove('active');
+    });
+
+    function togglePlayPause() {
+      isFlying = !isFlying;
+      playPauseBtn.textContent = isFlying ? '⏸ Pause' : '▶ Play';
+      playPauseBtn.classList.toggle('primary', !isFlying);
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+
+    reverseBtn.addEventListener('click', () => {
+      flySpeed = -flySpeed;
+      speedSlider.value = flySpeed;
+    });
+
+    speedSlider.addEventListener('input', (e) => {
+      flySpeed = parseFloat(e.target.value);
+      if (!isFlying && flySpeed !== 0) togglePlayPause();
+    });
+
+    spacingSlider.addEventListener('input', (e) => {
+      cardSpacingZ = parseInt(e.target.value, 10);
+      buildTunnel();
+    });
+
+    tunnelSizeSlider.addEventListener('input', (e) => {
+      tunnelDimension = parseInt(e.target.value, 10);
+      document.documentElement.style.setProperty('--tunnel-w', `${tunnelDimension}px`);
+      document.documentElement.style.setProperty('--tunnel-h', `${tunnelDimension}px`);
+      buildTunnel();
+    });
+
+    toggleStyleBtn.addEventListener('click', () => {
+      isEditorialMode = !isEditorialMode;
+      toggleStyleBtn.textContent = isEditorialMode ? '🎨 Editorial Mode' : '🖼 Clean Photo Mode';
+      buildTunnel();
+    });
+
+    applyImagesBtn.addEventListener('click', () => {
+      const raw = imageInputArea.value.trim();
+      if (!raw) return;
+      const lines = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        currentImages = lines;
+        buildTunnel();
+      }
+    });
+
+    presetMatchBtn.addEventListener('click', () => {
+      currentImages = [...IMAGES];
+      isEditorialMode = true;
+      toggleStyleBtn.textContent = '🎨 Toggle Style';
+      buildTunnel();
+    });
+
+    // Initialize
+    buildTunnel();
+    animate();
+  </script>
+</body>
+</html>

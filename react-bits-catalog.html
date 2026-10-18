@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Website Builder UI Catalog — 302+ Components (Magic UI, React Bits & 3D)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    :root {
+      --bg-color: #0b0c10;
+      --card-bg: rgba(20, 22, 29, 0.72);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 255, 255, 0.24);
+      --accent: #ffffff;
+      --text-main: #f0f2f7;
+      --text-muted: #8b92a4;
+      --sidebar-w: 110px;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      background-position: center center;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-main);
+      display: flex;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: rgba(14, 15, 20, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 12px;
+      z-index: 50;
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 4px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: #9094a0;
+      font-size: 10.5px;
+      font-weight: 600;
+      gap: 6px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #191b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-item.active .nav-icon {
+      border-color: rgba(255, 255, 255, 0.35);
+      background: #20232c;
+    }
+
+    /* MAIN CONTENT */
+    .main-area {
+      flex: 1;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 36px 48px 80px;
+      position: relative;
+    }
+
+    /* HEADER */
+    .catalog-header {
+      max-width: 1300px;
+      margin: 0 auto 30px;
+    }
+
+    .catalog-badge-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .catalog-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 11px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .catalog-badge.magic {
+      background: rgba(168, 85, 247, 0.15);
+      border-color: rgba(168, 85, 247, 0.35);
+      color: #e9d5ff;
+    }
+
+    .catalog-badge.reactbits {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: rgba(6, 182, 212, 0.35);
+      color: #cffafe;
+    }
+
+    .catalog-badge.three-d {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+    }
+
+    .catalog-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+
+    .catalog-title span {
+      background: linear-gradient(135deg, #ffffff 30%, #a78bfa 70%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .catalog-sub {
+      color: var(--text-muted);
+      font-size: 14.5px;
+      max-width: 820px;
+      line-height: 1.55;
+    }
+
+    /* FILTER BAR */
+    .filter-bar {
+      max-width: 1300px;
+      margin: 0 auto 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-box {
+      width: 100%;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 52px;
+      background: rgba(18, 20, 26, 0.88);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 0 20px 0 48px;
+      color: #fff;
+      font-size: 14.5px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .search-input:focus {
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(22, 24, 32, 0.98);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(168, 85, 247, 0.15);
+    }
+
+    .search-icon {
+      position: absolute;
+      top: 50%;
+      left: 18px;
+      transform: translateY(-50%);
+      color: #6c7284;
+      pointer-events: none;
+    }
+
+    /* LIBRARY SELECTOR PILLS */
+    .library-selector-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .lib-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-right: 4px;
+    }
+
+    .lib-pill {
+      padding: 7px 15px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .lib-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .lib-pill.active {
+      background: #ffffff;
+      color: #0b0c10;
+      border-color: #fff;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+    }
+
+    .lib-pill[data-lib="MagicUI"].active {
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      color: #fff;
+      border-color: #c084fc;
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+    }
+
+    .lib-pill[data-lib="ReactBits"].active {
+      background: linear-gradient(135deg, #06b6d4, #3b82f6);
+      color: #fff;
+      border-color: #67e8f9;
+      box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    .lib-pill[data-lib="Pure3D"].active {
+      background: linear-gradient(135deg, #10b981, #0284c7);
+      color: #fff;
+      border-color: #38bdf8;
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+    }
+
+    /* CATEGORY PILLS */
+    .category-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .cat-pill {
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cat-pill:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+    }
+
+    .cat-pill.active {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+      font-weight: 700;
+    }
+
+    .cat-count {
+      font-size: 10px;
+      padding: 1.5px 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .lib-pill.active .cat-count {
+      background: rgba(0, 0, 0, 0.22);
+      color: inherit;
+    }
+
+    /* COMPONENT GRID */
+    .components-grid {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(370px, 1fr));
+      gap: 20px;
+    }
+
+    /* COMPONENT CARD */
+    .comp-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .comp-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    .comp-card-top {
+      margin-bottom: 14px;
+    }
+
+    .comp-badges {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+
+    .badge-group-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .comp-lib-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .comp-lib-tag.magicui {
+      background: rgba(168, 85, 247, 0.16);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .comp-lib-tag.reactbits {
+      background: rgba(6, 182, 212, 0.14);
+      color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.28);
+    }
+
+    .comp-lib-tag.pure3d {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .comp-category-tag {
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      padding: 2.5px 7px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #94a3b8;
+    }
+
+    .comp-category-tag.textanimations, .comp-category-tag.magicui-text { color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+    .comp-category-tag.components, .comp-category-tag.magicui-layout { color: #c084fc; background: rgba(192, 132, 252, 0.1); }
+    .comp-category-tag.animations, .comp-category-tag.magicui-effects { color: #f472b6; background: rgba(244, 114, 182, 0.1); }
+    .comp-category-tag.backgrounds { color: #34d399; background: rgba(52, 211, 153, 0.1); }
+    .comp-category-tag.micro { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+    .comp-category-tag.d-ui { color: #38bdf8; background: rgba(56, 189, 248, 0.14); }
+    .comp-category-tag.magicui-hero { color: #fb7185; background: rgba(251, 113, 133, 0.1); }
+    .comp-category-tag.magicui-buttons { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .comp-category-tag.magicui-mockups { color: #2dd4bf; background: rgba(45, 212, 191, 0.1); }
+
+    .comp-deps {
+      font-size: 9.5px;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+    }
+
+    .comp-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comp-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .comp-card-actions {
+      display: flex;
+      gap: 7px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    .action-btn.primary {
+      background: #ffffff;
+      color: #0b0c10;
+      font-weight: 700;
+      border-color: #fff;
+    }
+
+    .action-btn.primary:hover {
+      background: #e2e8f0;
+    }
+
+    .action-btn.cli {
+      background: rgba(168, 85, 247, 0.12);
+      color: #d8b4fe;
+      border-color: rgba(168, 85, 247, 0.3);
+    }
+
+    .action-btn.cli:hover {
+      background: rgba(168, 85, 247, 0.22);
+      color: #fff;
+    }
+
+    /* CODE MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(14px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      width: clamp(340px, 78vw, 820px);
+      max-height: 88vh;
+      background: #12141a;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 24px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .modal-header h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .close-modal-btn {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .close-modal-btn:hover { color: #fff; }
+
+    .modal-meta-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .cli-install-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(168, 85, 247, 0.08);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 12px;
+      padding: 8px 14px;
+      margin-bottom: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #d8b4fe;
+    }
+
+    .cli-copy-sub-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 4px 10px;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .cli-copy-sub-btn:hover {
+      background: #fff;
+      color: #0b0c10;
+    }
+
+    .modal-pre {
+      background: #08090c;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px;
+      overflow: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      max-height: 400px;
+      margin-bottom: 18px;
+      line-height: 1.55;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #ffffff;
+      color: #0b0c10;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 200;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <!-- Hub / Catalog Active -->
+    <a href="react-bits-catalog.html" class="nav-item active" title="AI Component Catalog">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <span>AI Catalog</span>
+    </a>
+
+    <!-- 1. Sphere Wall -->
+    <a href="sphere-wall.html" class="nav-item" title="Sphere Wall">
+      <div class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="18" stroke="#777" stroke-width="3"/>
+          <ellipse cx="24" cy="24" rx="18" ry="8" stroke="#555" stroke-width="2"/>
+        </svg>
+      </div>
+      <span>Sphere Wall</span>
+    </a>
+
+    <!-- 2. Ring Carousel -->
+    <a href="ring-carousel.html" class="nav-item" title="Ring Carousel">
+      <div class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <ellipse cx="24" cy="24" rx="18" ry="8" stroke="#777" stroke-width="2"/>
+          <rect x="18" y="16" width="12" height="16" rx="2" fill="#fff"/>
+        </svg>
+      </div>
+      <span>Carousel</span>
+    </a>
+
+    <!-- 3. Orbit Globe -->
+    <a href="orbit-globe.html" class="nav-item" title="Orbit Globe">
+      <div class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="14" stroke="#666" stroke-width="2" stroke-dasharray="3 3"/>
+          <rect x="18" y="18" width="12" height="12" rx="3" fill="#fff"/>
+        </svg>
+      </div>
+      <span>Orbit Globe</span>
+    </a>
+
+    <!-- 4. Card Tunnel -->
+    <a href="card-tunnel.html" class="nav-item" title="Card Tunnel">
+      <div class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="8" width="32" height="32" rx="3" stroke="#777" stroke-width="2"/>
+          <rect x="16" y="16" width="16" height="16" rx="2" stroke="#aaa" stroke-width="2"/>
+        </svg>
+      </div>
+      <span>Tunnel</span>
+    </a>
+
+    <!-- 5. Spiral Stream -->
+    <a href="spiral-stream.html" class="nav-item" title="Spiral Stream">
+      <div class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+          <path d="M12 10 C 28 8, 36 14, 36 20 C 36 26, 12 24, 12 30 C 12 36, 28 40, 36 38" stroke="#aaa" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="10" y="18" width="8" height="11" rx="2" fill="#fff" transform="rotate(-12 14 23)"/>
+        </svg>
+      </div>
+      <span>Spiral</span>
+    </a>
+  </aside>
+
+  <!-- MAIN SCROLLABLE CONTENT -->
+  <main class="main-area">
+    <div class="catalog-header">
+      <div class="catalog-badge-row">
+        <div class="catalog-badge">
+          <span>⚡</span> Master AI Website Builder Registry
+        </div>
+        <div class="catalog-badge magic">
+          <span>✨</span> 79 Magic UI Components
+        </div>
+        <div class="catalog-badge reactbits">
+          <span>⚛️</span> 218 React Bits Components
+        </div>
+        <div class="catalog-badge three-d">
+          <span>🎲</span> 5 Pure 3D Engines
+        </div>
+      </div>
+      <h1 class="catalog-title">302+ AI UI Components <span>& 3D Showcases</span></h1>
+      <p class="catalog-sub">
+        Browse, search, and extract modern UI blocks for your AI website builder: responsive bento grids, kinetic text animations, interactive 3D hero globes, WebGL backgrounds, and pure CSS 3D corridor engines.
+      </p>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <!-- Search Input -->
+      <div class="search-box">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search by name, category, or keyword (e.g. 'bento', 'marquee', 'split text', 'globe', '3D', 'shimmer')..." />
+      </div>
+
+      <!-- Library Selector Bar -->
+      <div class="library-selector-bar" id="librarySelector">
+        <span class="lib-label">Library:</span>
+        <button class="lib-pill active" data-lib="all">All Libraries <span class="cat-count" id="countLibAll">302</span></button>
+        <button class="lib-pill" data-lib="MagicUI">⚡ Magic UI <span class="cat-count" id="countLibMagic">79</span></button>
+        <button class="lib-pill" data-lib="ReactBits">⚛️ React Bits <span class="cat-count" id="countLibReactBits">218</span></button>
+        <button class="lib-pill" data-lib="Pure3D">🎲 Pure 3D Engines <span class="cat-count" id="countLib3D">5</span></button>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-pills" id="categoryPills">
+        <button class="cat-pill active" data-cat="all">All Categories <span class="cat-count" id="countCatAll">302</span></button>
+        <button class="cat-pill" data-cat="3D-UI">3D Showcases <span class="cat-count" id="countCat3D">5</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Layout">Bento & Layout <span class="cat-count" id="countCatMagicLayout">7</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Hero">Hero Elements <span class="cat-count" id="countCatMagicHero">8</span></button>
+        <button class="cat-pill" data-cat="TextAnimations">Text Animations <span class="cat-count" id="countCatText">32</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Text">Magic Text <span class="cat-count" id="countCatMagicText">20</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Buttons">Buttons & CTA <span class="cat-count" id="countCatButtons">7</span></button>
+        <button class="cat-pill" data-cat="Components">UI Components <span class="cat-count" id="countCatComponents">48</span></button>
+        <button class="cat-pill" data-cat="Animations">Animations <span class="cat-count" id="countCatAnimations">38</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Effects">Visual Effects <span class="cat-count" id="countCatEffects">31</span></button>
+        <button class="cat-pill" data-cat="Backgrounds">Backgrounds <span class="cat-count" id="countCatBackgrounds">65</span></button>
+        <button class="cat-pill" data-cat="Micro">Micro Interactions <span class="cat-count" id="countCatMicro">34</span></button>
+        <button class="cat-pill" data-cat="MagicUI-Mockups">Device Mockups <span class="cat-count" id="countCatMockups">6</span></button>
+      </div>
+    </div>
+
+    <!-- GRID -->
+    <div class="components-grid" id="componentsGrid">
+      <!-- Injected via JavaScript -->
+    </div>
+  </main>
+
+  <!-- CODE SNIPPET MODAL -->
+  <div class="modal-overlay" id="codeModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle">Component Usage</h3>
+        <button class="close-modal-btn" id="closeModalBtn">✕</button>
+      </div>
+
+      <div class="modal-meta-row">
+        <span class="comp-lib-tag" id="modalLibTag">Library</span>
+        <span class="comp-category-tag" id="modalCatTag">Category</span>
+        <span class="comp-deps" id="modalDeps"></span>
+      </div>
+
+      <div class="cli-install-box" id="modalCliBox" style="display:none;">
+        <span id="modalCliCommand">npx shadcn@latest add @magicui/...</span>
+        <button class="cli-copy-sub-btn" id="modalCliCopyBtn">Copy CLI</button>
+      </div>
+
+      <pre class="modal-pre" id="modalCode"></pre>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="action-btn primary" id="modalCopyBtn">📋 Copy Snippet for AI</button>
+        <a href="#" target="_blank" class="action-btn" id="modalDocsBtn">📖 View Documentation</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <span>✓</span> Copied AI component code to clipboard!
+  </div>
+
+  <script>
+    let registryData = null;
+    let activeLibrary = 'all';
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    const grid = document.getElementById('componentsGrid');
+    const searchInput = document.getElementById('searchInput');
+    const librarySelector = document.getElementById('librarySelector');
+    const categoryPills = document.getElementById('categoryPills');
+    const codeModal = document.getElementById('codeModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalLibTag = document.getElementById('modalLibTag');
+    const modalCatTag = document.getElementById('modalCatTag');
+    const modalDeps = document.getElementById('modalDeps');
+    const modalCliBox = document.getElementById('modalCliBox');
+    const modalCliCommand = document.getElementById('modalCliCommand');
+    const modalCliCopyBtn = document.getElementById('modalCliCopyBtn');
+    const modalCode = document.getElementById('modalCode');
+    const modalCopyBtn = document.getElementById('modalCopyBtn');
+    const modalDocsBtn = document.getElementById('modalDocsBtn');
+    const toast = document.getElementById('toast');
+
+    // Fetch master generated registry
+    fetch('ai-components-registry.json')
+      .then(res => res.json())
+      .then(data => {
+        registryData = data;
+        updateCounts();
+        renderGrid();
+      })
+      .catch(err => {
+        console.error('Failed to load registry:', err);
+      });
+
+    function updateCounts() {
+      if (!registryData) return;
+
+      const comps = registryData.components;
+      const magicCount = comps.filter(c => c.library === 'MagicUI').length;
+      const reactBitsCount = comps.filter(c => c.library === 'ReactBits').length;
+      const pure3DCount = comps.filter(c => c.library === 'Pure3D').length;
+
+      document.getElementById('countLibAll').textContent = comps.length;
+      document.getElementById('countLibMagic').textContent = magicCount;
+      document.getElementById('countLibReactBits').textContent = reactBitsCount;
+      document.getElementById('countLib3D').textContent = pure3DCount;
+
+      document.getElementById('countCatAll').textContent = comps.length;
+      document.getElementById('countCat3D').textContent = registryData.categories['3D-UI']?.length || 0;
+      document.getElementById('countCatMagicLayout').textContent = registryData.categories['MagicUI-Layout']?.length || 0;
+      document.getElementById('countCatMagicHero').textContent = registryData.categories['MagicUI-Hero']?.length || 0;
+      document.getElementById('countCatText').textContent = registryData.categories.TextAnimations?.length || 0;
+      document.getElementById('countCatMagicText').textContent = registryData.categories['MagicUI-Text']?.length || 0;
+      document.getElementById('countCatButtons').textContent = registryData.categories['MagicUI-Buttons']?.length || 0;
+      document.getElementById('countCatComponents').textContent = registryData.categories.Components?.length || 0;
+      document.getElementById('countCatAnimations').textContent = registryData.categories.Animations?.length || 0;
+      document.getElementById('countCatEffects').textContent = registryData.categories['MagicUI-Effects']?.length || 0;
+      document.getElementById('countCatBackgrounds').textContent = registryData.categories.Backgrounds?.length || 0;
+      document.getElementById('countCatMicro').textContent = registryData.categories.Micro?.length || 0;
+      document.getElementById('countCatMockups').textContent = registryData.categories['MagicUI-Mockups']?.length || 0;
+    }
+
+    function renderGrid() {
+      if (!registryData) return;
+      grid.innerHTML = '';
+
+      const filtered = registryData.components.filter(c => {
+        const matchesLib = activeLibrary === 'all' || c.library === activeLibrary;
+        const matchesCat = activeCategory === 'all' || c.category === activeCategory;
+        const q = searchQuery.toLowerCase();
+        const matchesSearch = !q || 
+          c.name.toLowerCase().includes(q) || 
+          (c.title && c.title.toLowerCase().includes(q)) ||
+          c.category.toLowerCase().includes(q) || 
+          c.library.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          (c.cliCommand && c.cliCommand.toLowerCase().includes(q)) ||
+          c.tags.some(t => t.toLowerCase().includes(q));
+
+        return matchesLib && matchesCat && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align:center; padding: 70px 20px; color:#888;">
+            <p style="font-size:20px; font-weight:700; margin-bottom:8px; color:#fff;">No components found</p>
+            <p style="font-size:14px; max-width:400px; margin:0 auto;">No matching UI blocks for your active library, category, or search "${searchQuery}".</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(comp => {
+        const card = document.createElement('div');
+        card.className = 'comp-card';
+
+        const catClass = comp.category.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const libClass = (comp.library || 'reactbits').toLowerCase();
+        const is3D = comp.library === 'Pure3D';
+        const hasCli = !!comp.cliCommand;
+
+        let libIcon = '⚛️';
+        if (comp.library === 'MagicUI') libIcon = '⚡';
+        if (comp.library === 'Pure3D') libIcon = '🎲';
+
+        card.innerHTML = `
+          <div class="comp-card-top">
+            <div class="comp-badges">
+              <div class="badge-group-left">
+                <span class="comp-lib-tag ${libClass}">${libIcon} ${comp.library}</span>
+                <span class="comp-category-tag ${catClass}">${comp.category}</span>
+              </div>
+              <span class="comp-deps" title="${comp.dependencies || ''}">${comp.dependencies || 'vanilla'}</span>
+            </div>
+            <h3 class="comp-name">
+              ${comp.name}
+            </h3>
+            <p class="comp-desc">${comp.description}</p>
+          </div>
+          <div class="comp-card-actions">
+            <button class="action-btn primary" onclick="openModal('${comp.id}')">
+              📋 AI Code
+            </button>
+            ${hasCli ? `
+              <button class="action-btn cli" onclick="copyCli('${comp.cliCommand}')" title="Copy CLI Command">
+                ⚡ Copy CLI
+              </button>
+            ` : ''}
+            <a href="${comp.docsUrl}" ${is3D ? '' : 'target="_blank"'} class="action-btn">
+              ${is3D ? '🚀 Live 3D' : '📖 Docs'}
+            </a>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Library Filter
+    librarySelector.addEventListener('click', (e) => {
+      const btn = e.target.closest('.lib-pill');
+      if (!btn) return;
+      document.querySelectorAll('.lib-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeLibrary = btn.dataset.lib;
+      renderGrid();
+    });
+
+    // Category Filter
+    categoryPills.addEventListener('click', (e) => {
+      const btn = e.target.closest('.cat-pill');
+      if (!btn) return;
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCategory = btn.dataset.cat;
+      renderGrid();
+    });
+
+    // Search Input
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim();
+      renderGrid();
+    });
+
+    // Copy CLI directly
+    window.copyCli = function(cmd) {
+      navigator.clipboard.writeText(cmd);
+      showToast(`Copied: ${cmd}`);
+    };
+
+    // Modal
+    window.openModal = function(id) {
+      if (!registryData) return;
+      const comp = registryData.components.find(c => c.id === id);
+      if (!comp) return;
+
+      modalTitle.textContent = `${comp.name}`;
+      modalLibTag.className = `comp-lib-tag ${(comp.library || 'reactbits').toLowerCase()}`;
+      modalLibTag.textContent = comp.library;
+
+      modalCatTag.className = `comp-category-tag ${comp.category.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+      modalCatTag.textContent = comp.category;
+
+      modalDeps.textContent = `Deps: ${comp.dependencies || 'None'}`;
+
+      if (comp.cliCommand) {
+        modalCliBox.style.display = 'flex';
+        modalCliCommand.textContent = comp.cliCommand;
+        modalCliCopyBtn.onclick = () => {
+          navigator.clipboard.writeText(comp.cliCommand);
+          showToast(`Copied: ${comp.cliCommand}`);
+        };
+      } else {
+        modalCliBox.style.display = 'none';
+      }
+
+      modalCode.textContent = comp.usage || '// No snippet available';
+      modalDocsBtn.href = comp.docsUrl;
+      modalDocsBtn.textContent = comp.category === '3D-UI' ? '🚀 Open Live 3D Experience' : '📖 View Official Documentation';
+
+      modalCopyBtn.onclick = () => {
+        navigator.clipboard.writeText(comp.usage);
+        showToast(`Copied ${comp.name} code for AI!`);
+      };
+
+      codeModal.classList.add('open');
+    };
+
+    closeModalBtn.addEventListener('click', () => {
+      codeModal.classList.remove('open');
+    });
+
+    codeModal.addEventListener('click', (e) => {
+      if (e.target === codeModal) codeModal.classList.remove('open');
+    });
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

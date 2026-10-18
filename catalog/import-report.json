@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-10-18T10:38:33.333Z",
+  "durationMs": 234,
+  "summary": {
+    "totalCatalogEntries": 1352,
+    "verifiedTemplates": 100,
+    "verifiedSections": 697,
+    "verifiedComponents": 415,
+    "verifiedEffectsAnd3d": 140,
+    "groupedVariants": 18,
+    "exactDuplicatesPruned": 0
+  },
+  "sources": [
+    {
+      "name": "100 Free HTML Templates",
+      "count": 100,
+      "license": "MIT"
+    },
+    {
+      "name": "React Bits",
+      "count": 218,
+      "license": "MIT"
+    },
+    {
+      "name": "Magic UI",
+      "count": 210,
+      "license": "MIT"
+    },
+    {
+      "name": "Motion Primitives / Motiq",
+      "count": 98,
+      "license": "MIT"
+    },
+    {
+      "name": "Animate UI / shadcn Primitives",
+      "count": 24,
+      "license": "MIT"
+    },
+    {
+      "name": "UI Universe 3D Engines",
+      "count": 5,
+      "license": "MIT"
+    }
+  ],
+  "licenseAudit": {
+    "allPermissive": true,
+    "dominantLicense": "MIT",
+    "commercialUseApproved": true
+  }
+}

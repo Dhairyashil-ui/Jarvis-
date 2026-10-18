@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>3D Rotating Cylinder Carousel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* -------------------------------------------------------------
+       GLOBAL RESET & ROOT VARIABLES
+    ------------------------------------------------------------- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-color: #0b0c10;
+      --dot-color: rgba(255, 255, 255, 0.08);
+      --card-w: 215px;
+      --card-h: 255px;
+      --card-radius: 36px;
+      --tilt-x: -23deg;
+      --tilt-z: -11deg;
+      --perspective: 1400px;
+      --sidebar-w: 110px;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      /* Subtle dot grid pattern matching screenshot */
+      background-image: radial-gradient(var(--dot-color) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      background-position: center center;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      display: flex;
+      position: relative;
+    }
+
+    /* -------------------------------------------------------------
+       LEFT COMPONENT NAVIGATION SIDEBAR (Matching Screenshot)
+    ------------------------------------------------------------- */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: rgba(14, 15, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 14px;
+      z-index: 50;
+      position: relative;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px;
+      border-radius: 14px;
+      text-decoration: none;
+      color: #9094a0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      background: #191b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-item.active .nav-icon {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: #20232c;
+    }
+
+    /* -------------------------------------------------------------
+       3D STAGE & SCENE
+    ------------------------------------------------------------- */
+    .viewport {
+      flex: 1;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: var(--perspective);
+      perspective-origin: 50% 44%;
+      cursor: grab;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    .viewport:active {
+      cursor: grabbing;
+    }
+
+    /* Outer tilt gimbal container */
+    .tilt-wrapper {
+      position: absolute;
+      width: 0;
+      height: 0;
+      top: 47%;
+      left: 50%;
+      transform-style: preserve-3d;
+      transform: translateY(-20px) rotateX(var(--tilt-x)) rotateZ(var(--tilt-z));
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* Spinning ring cylinder */
+    .carousel-ring {
+      position: absolute;
+      width: 0;
+      height: 0;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    /* -------------------------------------------------------------
+       CAROUSEL CARD ITEM
+    ------------------------------------------------------------- */
+    .card-slot {
+      position: absolute;
+      left: calc(var(--card-w) / -2);
+      top: calc(var(--card-h) / -2);
+      width: var(--card-w);
+      height: var(--card-h);
+      transform-style: preserve-3d;
+      backface-visibility: visible;
+      will-change: transform, filter, opacity;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--card-radius);
+      position: relative;
+      overflow: hidden;
+      backface-visibility: visible;
+      background: #14151b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 20px 45px -10px rgba(0, 0, 0, 0.85),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.3s ease;
+      filter: brightness(var(--card-brightness, 1));
+      opacity: var(--card-opacity, 1);
+    }
+
+    .card-slot:hover .card-inner {
+      transform: scale(1.06) translateZ(12px);
+      box-shadow: 
+        0 30px 65px -8px rgba(0, 0, 0, 0.95),
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        0 0 25px rgba(255, 255, 255, 0.12);
+    }
+
+    /* -------------------------------------------------------------
+       CARD CONTENTS & EDITORIAL STYLES
+    ------------------------------------------------------------- */
+    .card-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Subtle top glass reflection sheen */
+    .card-sheen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 55%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+      border-top-left-radius: var(--card-radius);
+      border-top-right-radius: var(--card-radius);
+    }
+
+    /* Center flower cutout mask (Takashi Murakami / graphic art style) */
+    .center-flower-badge {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 86px;
+      height: 86px;
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6));
+    }
+
+    /* Card Layout: Olive "north ave" style */
+    .style-olive {
+      background-color: #5d674f;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+    }
+    .style-olive .photo-inset {
+      width: 100%;
+      height: 152px;
+      background: #f2ede4;
+      border-radius: 16px;
+      padding: 7px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+    .style-olive .photo-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 11px;
+    }
+    .style-olive .olive-footer {
+      margin-top: auto;
+      padding: 4px 6px 4px 6px;
+    }
+    .style-olive .olive-footer h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      color: #edebe4;
+      letter-spacing: -0.6px;
+    }
+
+    /* Card Layout: Cream "Maple Street" style */
+    .style-cream {
+      background-color: #ede8dc;
+      color: #1e1f1c;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+    .style-cream .circle-inset {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-bottom: 14px;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+    .style-cream .circle-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .style-cream .cream-text {
+      font-size: 13.5px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: #242422;
+      max-width: 145px;
+    }
+    .style-cream .cream-dash {
+      font-size: 22px;
+      margin-top: auto;
+      font-weight: 800;
+      color: #333;
+    }
+
+    /* Card Layout: Sage "0034 - 0095" style */
+    .style-sage-split {
+      background-color: #dce3d5;
+      color: #222520;
+      position: relative;
+    }
+    .style-sage-split .left-image-half {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 62%;
+      height: 100%;
+      object-fit: cover;
+      mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+    }
+    .style-sage-split .right-numbers {
+      position: absolute;
+      right: 18px;
+      top: 22px;
+      bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #1a1e17;
+    }
+
+    /* Card Layout: Bold Editorial Posters (e.g. MADRID, 0316 AVE, ASOS) */
+    .card-overlay-text {
+      position: absolute;
+      inset: 0;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .card-overlay-text.top-right {
+      align-items: flex-end;
+      text-align: right;
+    }
+    .card-overlay-text.bottom-left {
+      justify-content: flex-end;
+    }
+    .card-badge {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .card-title-lg {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.8);
+    }
+    .card-gradient-scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 40%, rgba(0,0,0,0.65) 100%);
+      pointer-events: none;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM "KEYFRAMES ^" PILL & CONTROL DRAWER
+    ------------------------------------------------------------- */
+    .ui-layer {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .keyframes-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px 9px 22px;
+      background: rgba(22, 23, 29, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 9999px;
+      color: #eaecef;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255,255,255,0.06);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .keyframes-pill:hover {
+      background: rgba(30, 32, 40, 0.98);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 35px -5px rgba(0, 0, 0, 0.75);
+    }
+
+    .keyframes-pill .icon-caret {
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .keyframes-pill.active .icon-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Frosted Controls Panel */
+    .controls-panel {
+      position: absolute;
+      bottom: 66px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.96);
+      width: 440px;
+      max-width: calc(100vw - 32px);
+      background: rgba(18, 19, 25, 0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.88);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 99;
+    }
+
+    .controls-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-header h4 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h4 span {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #aaa;
+      font-weight: 500;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      color: #c0c4ce;
+    }
+
+    .control-row label {
+      font-weight: 500;
+    }
+
+    .control-row input[type="range"] {
+      width: 170px;
+      accent-color: #ffffff;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: #eee;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      color: #0b0c10;
+      border-color: #ffffff;
+    }
+
+    .btn.primary:hover {
+      background: #e4e6ea;
+    }
+
+    /* Image Manager Drawer inside Panel */
+    .image-manager {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .image-manager textarea {
+      width: 100%;
+      height: 64px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #eee;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      margin-top: 6px;
+      outline: none;
+    }
+
+    .image-manager textarea:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .hint-text {
+      font-size: 10.5px;
+      color: #7b808d;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    /* Subtle top hint */
+    .top-hint {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 600px) {
+      :root {
+        --card-w: 180px;
+        --card-h: 235px;
+        --card-radius: 26px;
+      }
+      .controls-panel {
+        width: calc(100vw - 24px);
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT COMPONENT NAVIGATION SIDEBAR -->
+  <aside class="sidebar">
+    <!-- 0. AI Catalog Hub -->
+    <a href="react-bits-catalog.html" class="nav-item" title="React Bits AI Catalog">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <span>AI Catalog</span>
+    </a>
+
+    <!-- 1. Sphere Wall -->
+    <a href="sphere-wall.html" class="nav-item" title="Sphere Wall">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="5" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="4" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="4" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="5" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+        </svg>
+      </div>
+      <span>Sphere Wall</span>
+    </a>
+
+    <!-- 2. Ring Carousel (Active) -->
+    <a href="ring-carousel.html" class="nav-item active" title="Ring Carousel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <ellipse cx="24" cy="24" rx="18" ry="10" stroke="#777" stroke-width="2" stroke-dasharray="3 3"/>
+          <rect x="19" y="28" width="10" height="12" rx="2.5" fill="#fff"/>
+          <rect x="6" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="33" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="12" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+          <rect x="29" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+        </svg>
+      </div>
+      <span>Ring Carousel</span>
+    </a>
+
+    <!-- 3. Orbit Globe -->
+    <a href="orbit-globe.html" class="nav-item" title="Orbit Globe">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="14" stroke="#888" stroke-width="1.5"/>
+          <rect x="18" y="18" width="12" height="12" rx="3" fill="#fff" transform="rotate(15 24 24)"/>
+          <rect x="7" y="14" width="9" height="9" rx="2" fill="#aaa" transform="rotate(-20 11.5 18.5)"/>
+          <rect x="30" y="26" width="9" height="9" rx="2" fill="#ccc" transform="rotate(35 34.5 30.5)"/>
+        </svg>
+      </div>
+      <span>Orbit Globe</span>
+    </a>
+
+    <!-- 4. Totem Wall -->
+    <div class="nav-item" title="Totem Wall (Coming Soon)">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="8" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="8" y="32" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="20" y="2" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="20" y="17" width="8" height="13" rx="2" fill="#fff"/>
+          <rect x="20" y="33" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="32" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="32" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="32" y="32" width="8" height="11" rx="2" fill="#777"/>
+        </svg>
+      </div>
+      <span>Totem Wall</span>
+    </div>
+
+    <!-- 5. Card Tunnel -->
+    <a href="card-tunnel.html" class="nav-item" title="Card Tunnel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="4" y="4" width="40" height="40" rx="3" stroke="#888" stroke-width="1.8"/>
+          <rect x="12" y="12" width="24" height="24" rx="2" stroke="#bbb" stroke-width="1.8"/>
+          <rect x="19" y="19" width="10" height="10" rx="1.5" fill="#fff"/>
+          <line x1="4" y1="4" x2="19" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="4" x2="29" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="4" y1="44" x2="19" y2="29" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="44" x2="29" y2="29" stroke="#888" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span>Card Tunnel</span>
+    </a>
+
+    <!-- 6. Spiral Stream -->
+    <a href="spiral-stream.html" class="nav-item" title="Spiral Stream">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <path d="M12 10 C 28 8, 36 14, 36 20 C 36 26, 12 24, 12 30 C 12 36, 28 40, 36 38" stroke="#888" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="10" y="18" width="8" height="11" rx="2" fill="#fff" transform="rotate(-12 14 23)"/>
+          <rect x="28" y="24" width="8" height="11" rx="2" fill="#888" transform="rotate(12 32 29)"/>
+          <rect x="22" y="8" width="8" height="11" rx="2" fill="#555" transform="rotate(6 26 13)"/>
+        </svg>
+      </div>
+      <span>Spiral Stream</span>
+    </a>
+  </aside>
+
+  <!-- Top navigation subtle hint -->
+  <div class="top-hint">
+    <span>Drag to rotate</span>
+    <span>•</span>
+    <span>Scroll to spin</span>
+    <span>•</span>
+    <span>Click card to center</span>
+  </div>
+
+  <!-- 3D Interactive Viewport -->
+  <div class="viewport" id="viewport">
+    <div class="tilt-wrapper" id="tiltWrapper">
+      <div class="carousel-ring" id="carouselRing">
+        <!-- Cards generated dynamically via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom UI Layer with Keyframes pill matching screenshot -->
+  <div class="ui-layer">
+    <button class="keyframes-pill" id="keyframesToggle" aria-label="Toggle Carousel Controls">
+      <span>Keyframes</span>
+      <span class="icon-caret">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- Interactive Control Panel (Toggled via Keyframes button) -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="panel-header">
+      <h4>3D Ring Keyframes <span>3D Engine</span></h4>
+      <button id="closePanelBtn" style="background:none; border:none; color:#777; cursor:pointer; font-size:16px;">✕</button>
+    </div>
+
+    <div class="control-row">
+      <label for="speedSlider">Rotation Speed</label>
+      <input type="range" id="speedSlider" min="-1.5" max="1.5" step="0.05" value="0.22">
+    </div>
+
+    <div class="control-row">
+      <label for="tiltXSlider">Pitch (Tilt X)</label>
+      <input type="range" id="tiltXSlider" min="-60" max="10" step="1" value="-23">
+    </div>
+
+    <div class="control-row">
+      <label for="tiltZSlider">Roll (Tilt Z)</label>
+      <input type="range" id="tiltZSlider" min="-45" max="45" step="1" value="-11">
+    </div>
+
+    <div class="control-row">
+      <label for="radiusSlider">Ring Radius</label>
+      <input type="range" id="radiusSlider" min="300" max="900" step="10" value="540">
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="playPauseBtn">⏸ Pause</button>
+      <button class="btn" id="resetAngleBtn">↺ Reset View</button>
+      <button class="btn" id="toggleStyleBtn">🎨 Toggle Style</button>
+    </div>
+
+    <div class="image-manager">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="font-size:12px; font-weight:600; color:#eee;">Update Images (Paste URLs)</label>
+        <span style="font-size:10px; color:#aaa;" id="cardCountLabel">9 cards</span>
+      </div>
+      <textarea id="imageInputArea" placeholder="Enter image URLs separated by commas or new lines..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="applyImagesBtn" style="flex:2;">Apply Images</button>
+        <button class="btn" id="presetMatchBtn" style="flex:1;">Exact Preset</button>
+      </div>
+      <p class="hint-text">💡 Or update the <code>const IMAGES = [...]</code> array in code on line 372!</p>
+    </div>
+  </div>
+
+  <!-- SVG Definition for Center Flower Mask Icon -->
+  <svg style="display:none;">
+    <defs>
+      <g id="flower-mask-icon">
+        <g fill="#f5f0e6">
+          <circle cx="50" cy="22" r="9"/>
+          <circle cx="70" cy="30" r="9"/>
+          <circle cx="78" cy="50" r="9"/>
+          <circle cx="70" cy="70" r="9"/>
+          <circle cx="50" cy="78" r="9"/>
+          <circle cx="30" cy="70" r="9"/>
+          <circle cx="22" cy="50" r="9"/>
+          <circle cx="30" cy="30" r="9"/>
+          <circle cx="50" cy="50" r="14"/>
+          <circle cx="42" cy="38" r="9"/>
+          <circle cx="58" cy="38" r="9"/>
+          <circle cx="42" cy="62" r="9"/>
+          <circle cx="58" cy="62" r="9"/>
+        </g>
+        <circle cx="50" cy="50" r="3.5" fill="#202124"/>
+        <circle cx="42" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="42" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="26" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="74" r="2.8" fill="#202124"/>
+        <circle cx="26" cy="50" r="2.8" fill="#202124"/>
+        <circle cx="74" cy="50" r="2.8" fill="#202124"/>
+      </g>
+    </defs>
+  </svg>
+
+  <script>
+    // =========================================================================
+    // 🌟 1-LINE IMAGE CONFIG: CHANGE YOUR IMAGES HERE!
+    // Paste ANY image URLs (local paths or web links) into this array:
+    // =========================================================================
+    const IMAGES = [
+      "assets/portrait_center.jpg",
+      "assets/flower_macro.jpg",
+      "assets/madrid_arch.jpg",
+      "assets/poppy_field.jpg",
+      "assets/moody_portrait.jpg",
+      "assets/forest_moss.jpg",
+      "assets/mountain_sky.jpg",
+      "assets/warm_flower.jpg",
+      "assets/meadow_flowers.jpg"
+    ];
+
+    // =========================================================================
+    // PRESET METADATA (Recreates the exact screenshot editorial poster design)
+    // =========================================================================
+    const SCREENSHOT_PRESETS = [
+      {
+        id: "center-man",
+        image: "assets/portrait_center.jpg",
+        type: "center-graphic",
+        fallback: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"
+      },
+      {
+        id: "flower-0034",
+        image: "assets/flower_macro.jpg",
+        type: "sage-split",
+        numTop: "0034",
+        numBottom: "0095",
+        fallback: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80"
+      },
+      {
+        id: "madrid",
+        image: "assets/madrid_arch.jpg",
+        type: "poster-black",
+        title: "MADRID",
+        subtitle: "BARCELONA",
+        fallback: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&q=80"
+      },
+      {
+        id: "poppy-field",
+        image: "assets/poppy_field.jpg",
+        type: "poster-text",
+        title: "0316 AVE",
+        badge: "UHT",
+        fallback: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&q=80"
+      },
+      {
+        id: "asos-nov",
+        image: "assets/moody_portrait.jpg",
+        type: "poster-text",
+        title: "nov",
+        badge: "asos",
+        fallback: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80"
+      },
+      {
+        id: "natural-fresh",
+        image: "assets/forest_moss.jpg",
+        type: "poster-text",
+        title: "FRESH",
+        badge: "NATURAL",
+        fallback: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80"
+      },
+      {
+        id: "sky-12k",
+        image: "assets/mountain_sky.jpg",
+        type: "poster-text",
+        title: "12K",
+        badge: "",
+        fallback: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80"
+      },
+      {
+        id: "maple-st",
+        image: "assets/warm_flower.jpg",
+        type: "cream-card",
+        text: "Maple Street is a lovely avenue with lush trees",
+        fallback: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80"
+      },
+      {
+        id: "north-ave",
+        image: "assets/meadow_flowers.jpg",
+        type: "olive-card",
+        title: "north ave",
+        fallback: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80"
+      }
+    ];
+
+    // =========================================================================
+    // STATE & CONFIGURATION
+    // =========================================================================
+    let currentImages = [...IMAGES];
+    let isEditorialMode = true; // Toggle between exact editorial preset & clean photo mode
+    let autoRotateSpeed = 0.22;
+    let isAutoRotating = true;
+    let tiltX = -23;
+    let tiltZ = -11;
+    let cylinderRadius = 540;
+    let currentYRotation = 0;
+    let targetYRotation = 0;
+    let velocity = 0;
+    let isDragging = false;
+    let startX = 0;
+    let lastX = 0;
+    let lastTime = 0;
+
+    // DOM Elements
+    const viewport = document.getElementById('viewport');
+    const tiltWrapper = document.getElementById('tiltWrapper');
+    const ring = document.getElementById('carouselRing');
+    const keyframesToggle = document.getElementById('keyframesToggle');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const tiltXSlider = document.getElementById('tiltXSlider');
+    const tiltZSlider = document.getElementById('tiltZSlider');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const resetAngleBtn = document.getElementById('resetAngleBtn');
+    const toggleStyleBtn = document.getElementById('toggleStyleBtn');
+    const imageInputArea = document.getElementById('imageInputArea');
+    const applyImagesBtn = document.getElementById('applyImagesBtn');
+    const presetMatchBtn = document.getElementById('presetMatchBtn');
+    const cardCountLabel = document.getElementById('cardCountLabel');
+
+    let cardElements = [];
+
+    // =========================================================================
+    // BUILD 3D CYLINDRICAL CAROUSEL
+    // =========================================================================
+    function buildCarousel() {
+      ring.innerHTML = '';
+      cardElements = [];
+
+      const count = currentImages.length;
+      cardCountLabel.textContent = `${count} cards`;
+      imageInputArea.value = currentImages.join('\n');
+
+      // Auto-compute ideal cylinder radius if not custom
+      const cardWidth = 215;
+      const computedRadius = Math.max(460, Math.round((cardWidth / 2) / Math.tan(Math.PI / count)) + 70);
+      if (!radiusSlider.dataset.manual) {
+        cylinderRadius = computedRadius;
+        radiusSlider.value = cylinderRadius;
+      }
+
+      const angleStep = 360 / count;
+
+      currentImages.forEach((imgSrc, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'card-slot';
+        slot.dataset.index = i;
+
+        // Angle around cylinder
+        const angle = i * angleStep;
+        slot.dataset.baseAngle = angle;
+        slot.style.transform = `rotateY(${angle}deg) translateZ(${cylinderRadius}px)`;
+
+        const inner = document.createElement('div');
+        inner.className = 'card-inner';
+
+        // Check if we can apply screenshot matching preset
+        const preset = isEditorialMode && SCREENSHOT_PRESETS[i % SCREENSHOT_PRESETS.length];
+
+        if (isEditorialMode && preset) {
+          renderEditorialCard(inner, preset, imgSrc);
+        } else {
+          renderCleanCard(inner, imgSrc, i, count);
+        }
+
+        slot.appendChild(inner);
+
+        // Click on card to bring it front & center
+        slot.addEventListener('click', (e) => {
+          if (Math.abs(velocity) > 0.05) return; // ignore during fast drag
+          rotateCardToFront(i);
+        });
+
+        ring.appendChild(slot);
+        cardElements.push({ slot, inner, baseAngle: angle });
+      });
+
+      updateRingTransform();
+      updateDepthShading();
+    }
+
+    // Render Editorial Style matching the screenshot
+    function renderEditorialCard(container, preset, src) {
+      const actualSrc = src || preset.image;
+
+      if (preset.type === 'center-graphic') {
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Center Portrait">
+          <svg class="center-flower-badge" viewBox="0 0 100 100">
+            <use href="#flower-mask-icon" />
+          </svg>
+          <div class="card-sheen"></div>
+        `;
+      } 
+      else if (preset.type === 'olive-card') {
+        container.className = 'card-inner style-olive';
+        container.innerHTML = `
+          <div class="photo-inset">
+            <img src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Floral photo">
+          </div>
+          <div class="olive-footer">
+            <h3>${preset.title}</h3>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      } 
+      else if (preset.type === 'cream-card') {
+        container.className = 'card-inner style-cream';
+        container.innerHTML = `
+          <div class="circle-inset">
+            <img src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Circle photo">
+          </div>
+          <div class="cream-text">${preset.text}</div>
+          <div class="cream-dash">-</div>
+          <div class="card-sheen"></div>
+        `;
+      } 
+      else if (preset.type === 'sage-split') {
+        container.className = 'card-inner style-sage-split';
+        container.innerHTML = `
+          <img class="left-image-half" src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Blossom macro">
+          <div class="right-numbers">
+            <span>${preset.numTop}</span>
+            <span>-</span>
+            <span>${preset.numBottom}</span>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      } 
+      else if (preset.type === 'poster-black') {
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Architecture">
+          <div class="card-gradient-scrim"></div>
+          <div class="card-overlay-text bottom-left">
+            <div class="card-title-lg" style="font-size:24px;">${preset.title}</div>
+            <div class="card-badge" style="letter-spacing:2px; font-size:11px; margin-top:2px;">${preset.subtitle}</div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      } 
+      else {
+        // General editorial poster with text overlay
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='${preset.fallback}'" alt="Editorial Photo">
+          <div class="card-gradient-scrim"></div>
+          <div class="card-overlay-text ${preset.id === 'poppy-field' ? 'top-right' : 'bottom-left'}">
+            ${preset.badge ? `<div class="card-badge">${preset.badge}</div>` : ''}
+            <div class="card-title-lg">${preset.title}</div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+    }
+
+    // Clean Full Image Mode
+    function renderCleanCard(container, src, index, total) {
+      const fallbackUrl = `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80`;
+      container.className = 'card-inner';
+      container.innerHTML = `
+        <img class="card-img" src="${src}" onerror="this.src='${fallbackUrl}'" alt="Slide ${index + 1}">
+        <div class="card-gradient-scrim" style="background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.7) 100%);"></div>
+        <div class="card-overlay-text bottom-left" style="padding:16px;">
+          <div class="card-badge" style="font-size:11px; opacity:0.8;">${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}</div>
+        </div>
+        <div class="card-sheen"></div>
+      `;
+    }
+
+    // =========================================================================
+    // 3D MATH & LIGHTING / DEPTH SHADING
+    // =========================================================================
+    function updateRingTransform() {
+      ring.style.transform = `rotateY(${currentYRotation}deg)`;
+      tiltWrapper.style.transform = `translateY(-20px) rotateX(${tiltX}deg) rotateZ(${tiltZ}deg)`;
+    }
+
+    function updateDepthShading() {
+      // Calculate depth, opacity & brightness for each card based on cosine angle to camera
+      cardElements.forEach(({ slot, inner, baseAngle }) => {
+        // World rotation angle relative to front camera view
+        let totalAngle = (currentYRotation + baseAngle) % 360;
+        if (totalAngle < 0) totalAngle += 360;
+
+        // Front is near 0° or 360°, back is near 180°
+        // We normalize so that 0 is in front (towards camera), 180 is in the back
+        let diff = Math.abs(totalAngle - 0);
+        if (diff > 180) diff = 360 - diff;
+
+        // cos: 1 when directly in front, -1 when directly in back
+        const rad = (diff * Math.PI) / 180;
+        const cosVal = Math.cos(rad);
+
+        // depthFactor: 1.0 at front, 0.0 at back
+        const depthFactor = (cosVal + 1) / 2;
+
+        // Shading: Front cards are bright (1.0), back cards darken down to ~0.35 just like in screenshot!
+        const brightness = 0.35 + 0.65 * depthFactor;
+        const opacity = 0.6 + 0.4 * depthFactor;
+
+        inner.style.setProperty('--card-brightness', brightness.toFixed(3));
+        inner.style.setProperty('--card-opacity', opacity.toFixed(3));
+      });
+    }
+
+    // Smoothly bring chosen card to the front center
+    function rotateCardToFront(index) {
+      const angleStep = 360 / currentImages.length;
+      const targetAngle = -(index * angleStep);
+
+      // Find shortest rotation path
+      let diff = (targetAngle - targetYRotation) % 360;
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+
+      targetYRotation += diff;
+      velocity = 0;
+    }
+
+    // =========================================================================
+    // ANIMATION & PHYSICS LOOP
+    // =========================================================================
+    function animate() {
+      if (!isDragging) {
+        if (isAutoRotating) {
+          targetYRotation += autoRotateSpeed;
+        }
+
+        // Apply drag momentum inertia
+        if (Math.abs(velocity) > 0.001) {
+          targetYRotation += velocity;
+          velocity *= 0.94; // friction
+        }
+      }
+
+      // Smooth lerp easing towards target rotation
+      const diff = targetYRotation - currentYRotation;
+      currentYRotation += diff * 0.12;
+
+      updateRingTransform();
+      updateDepthShading();
+
+      requestAnimationFrame(animate);
+    }
+
+    // =========================================================================
+    // INTERACTIVE GESTURES (DRAG & SWIPE WITH MOMENTUM)
+    // =========================================================================
+    viewport.addEventListener('pointerdown', (e) => {
+      // Don't drag if clicking buttons
+      if (e.target.closest('.controls-panel') || e.target.closest('.ui-layer')) return;
+
+      isDragging = true;
+      startX = e.clientX;
+      lastX = e.clientX;
+      lastTime = performance.now();
+      velocity = 0;
+      viewport.setPointerCapture(e.pointerId);
+    });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+
+      const now = performance.now();
+      const dt = Math.max(1, now - lastTime);
+      const dx = e.clientX - lastX;
+
+      // Rotate proportional to drag distance
+      const sensitivity = 0.38;
+      targetYRotation += dx * sensitivity;
+      currentYRotation += dx * sensitivity;
+
+      // Track velocity for release momentum
+      velocity = (dx / dt) * 14;
+
+      lastX = e.clientX;
+      lastTime = now;
+      updateRingTransform();
+    });
+
+    function endDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try { viewport.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+
+    viewport.addEventListener('pointerup', endDrag);
+    viewport.addEventListener('pointercancel', endDrag);
+
+    // Mouse Wheel to Rotate Carousel
+    window.addEventListener('wheel', (e) => {
+      if (e.target.closest('.controls-panel')) return; // allow scrolling inside panel
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY) * 6;
+      targetYRotation -= delta;
+    }, { passive: false });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') {
+        targetYRotation -= 25;
+      } else if (e.key === 'ArrowRight') {
+        targetYRotation += 25;
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    });
+
+    // =========================================================================
+    // UI CONTROLS & "KEYFRAMES ^" TOGGLE
+    // =========================================================================
+    keyframesToggle.addEventListener('click', () => {
+      const isOpen = controlsPanel.classList.toggle('open');
+      keyframesToggle.classList.toggle('active', isOpen);
+    });
+
+    closePanelBtn.addEventListener('click', () => {
+      controlsPanel.classList.remove('open');
+      keyframesToggle.classList.remove('active');
+    });
+
+    function togglePlayPause() {
+      isAutoRotating = !isAutoRotating;
+      playPauseBtn.textContent = isAutoRotating ? '⏸ Pause' : '▶ Play';
+      playPauseBtn.classList.toggle('primary', !isAutoRotating);
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+
+    speedSlider.addEventListener('input', (e) => {
+      autoRotateSpeed = parseFloat(e.target.value);
+      if (!isAutoRotating && autoRotateSpeed !== 0) {
+        togglePlayPause();
+      }
+    });
+
+    tiltXSlider.addEventListener('input', (e) => {
+      tiltX = parseInt(e.target.value, 10);
+      updateRingTransform();
+    });
+
+    tiltZSlider.addEventListener('input', (e) => {
+      tiltZ = parseInt(e.target.value, 10);
+      updateRingTransform();
+    });
+
+    radiusSlider.addEventListener('input', (e) => {
+      radiusSlider.dataset.manual = "true";
+      cylinderRadius = parseInt(e.target.value, 10);
+      // Update each slot's translateZ
+      cardElements.forEach(({ slot, baseAngle }) => {
+        slot.style.transform = `rotateY(${baseAngle}deg) translateZ(${cylinderRadius}px)`;
+      });
+    });
+
+    resetAngleBtn.addEventListener('click', () => {
+      tiltX = -23;
+      tiltZ = -11;
+      autoRotateSpeed = 0.22;
+      tiltXSlider.value = tiltX;
+      tiltZSlider.value = tiltZ;
+      speedSlider.value = autoRotateSpeed;
+      targetYRotation = 0;
+      delete radiusSlider.dataset.manual;
+      buildCarousel();
+    });
+
+    toggleStyleBtn.addEventListener('click', () => {
+      isEditorialMode = !isEditorialMode;
+      toggleStyleBtn.textContent = isEditorialMode ? '🎨 Editorial Mode' : '🖼 Clean Photo Mode';
+      buildCarousel();
+    });
+
+    // Apply custom images from textarea
+    applyImagesBtn.addEventListener('click', () => {
+      const raw = imageInputArea.value.trim();
+      if (!raw) return;
+
+      const lines = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        currentImages = lines;
+        buildCarousel();
+      }
+    });
+
+    // Reset to exact screenshot match preset
+    presetMatchBtn.addEventListener('click', () => {
+      currentImages = [...IMAGES];
+      isEditorialMode = true;
+      toggleStyleBtn.textContent = '🎨 Toggle Style';
+      delete radiusSlider.dataset.manual;
+      buildCarousel();
+    });
+
+    // Initialize carousel on load
+    buildCarousel();
+    animate();
+  </script>
+</body>
+</html>

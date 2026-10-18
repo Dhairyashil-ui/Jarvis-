@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ui-universe.dev/schemas/template.schema.json",
+  "title": "UIUniverseTemplate",
+  "description": "Normalized metadata schema for complete website templates in UI Universe",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "category",
+    "description",
+    "sourcePath",
+    "screenshotPath",
+    "sections",
+    "license",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^template\\.[a-z0-9_-]+\\.[a-z0-9_-]+\\.v[0-9]+$",
+      "description": "Deterministic stable unique identifier for template"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "saas",
+        "ai-products",
+        "ecommerce",
+        "portfolio",
+        "business",
+        "restaurant",
+        "education",
+        "agriculture-climate",
+        "finance",
+        "campaigns",
+        "admin-dashboard",
+        "health-fitness",
+        "local-services",
+        "events-community"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "sourcePath": {
+      "type": "string"
+    },
+    "screenshotPath": {
+      "type": "string"
+    },
+    "liveDemoUrl": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "componentId": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "designTokens": {
+      "type": "object",
+      "properties": {
+        "fonts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "colors": {
+          "type": "object"
+        },
+        "themeStyle": { "type": "string" }
+      }
+    },
+    "responsiveBreakpoints": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "features": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "license": {
+      "type": "object",
+      "required": ["id", "verified", "commercialUsePermitted"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "attributionRequired": { "type": "boolean" },
+        "commercialUsePermitted": { "type": "boolean" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "adapted", "reference"]
+    },
+    "blueprint": {
+      "type": "object"
+    },
+    "lastVerified": {
+      "type": "string"
+    }
+  }
+}

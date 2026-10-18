@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Spiral Stream - 3D UI Component</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* -------------------------------------------------------------
+       GLOBAL RESET & ROOT VARIABLES
+    ------------------------------------------------------------- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-color: #0b0c10;
+      --dot-color: rgba(255, 255, 255, 0.08);
+      --card-w: 168px;
+      --card-h: 224px;
+      --card-radius: 24px;
+      --helix-radius: 265px;
+      --perspective: 950px;
+      --sidebar-w: 110px;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      /* Subtle dot grid pattern matching screenshot */
+      background-image: radial-gradient(var(--dot-color) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      background-position: center center;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      display: flex;
+      position: relative;
+    }
+
+    /* -------------------------------------------------------------
+       LEFT COMPONENT NAVIGATION SIDEBAR
+    ------------------------------------------------------------- */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: rgba(14, 15, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 14px;
+      z-index: 50;
+      position: relative;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px;
+      border-radius: 14px;
+      text-decoration: none;
+      color: #9094a0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      background: #191b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-item.active .nav-icon {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: #20232c;
+    }
+
+    /* -------------------------------------------------------------
+       3D STAGE & PORTAL VIEWPORT
+    ------------------------------------------------------------- */
+    .viewport {
+      flex: 1;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    /* Rounded Portal Window matching screenshot */
+    .spiral-portal {
+      width: clamp(340px, 64vw, 740px);
+      height: clamp(380px, 80vh, 760px);
+      border-radius: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 30px 80px -15px rgba(0, 0, 0, 0.95),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      position: relative;
+      perspective: var(--perspective);
+      perspective-origin: 50% 50%;
+      background: #08090c;
+      cursor: grab;
+    }
+
+    .spiral-portal:active {
+      cursor: grabbing;
+    }
+
+    /* 3D Helix Stage Container */
+    .spiral-stage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    /* Portal Vignette Scrim */
+    .portal-vignette {
+      position: absolute;
+      inset: 0;
+      border-radius: 38px;
+      background: radial-gradient(circle at center, transparent 60%, rgba(0, 0, 0, 0.72) 100%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* -------------------------------------------------------------
+       HELIX CARDS & TRANSFORM
+    ------------------------------------------------------------- */
+    .helix-card {
+      position: absolute;
+      left: calc(var(--card-w) / -2);
+      top: calc(var(--card-h) / -2);
+      width: var(--card-w);
+      height: var(--card-h);
+      transform-style: preserve-3d;
+      will-change: transform, filter, opacity;
+      cursor: pointer;
+      backface-visibility: visible;
+      -webkit-backface-visibility: visible;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--card-radius);
+      position: relative;
+      overflow: hidden;
+      background: #14151b;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 
+        0 20px 45px -8px rgba(0, 0, 0, 0.85),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      transition: box-shadow 0.25s ease, border-color 0.25s ease;
+      filter: brightness(var(--card-brightness, 1));
+      opacity: var(--card-opacity, 1);
+    }
+
+    .helix-card:hover .card-inner {
+      box-shadow: 
+        0 28px 65px -6px rgba(0, 0, 0, 0.95),
+        0 0 0 2px rgba(255, 255, 255, 0.45),
+        0 0 35px rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .card-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      display: block;
+    }
+
+    .card-sheen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+      border-top-left-radius: var(--card-radius);
+      border-top-right-radius: var(--card-radius);
+    }
+
+    /* -------------------------------------------------------------
+       EXACT CARD STYLES MATCHING SPIRAL STREAM SCREENSHOT
+    ------------------------------------------------------------- */
+    
+    /* 1. FRONT CARD: ULTIMATE TASTE with olive green scalloped pattern */
+    .card-inner.style-ultimate-taste {
+      background: #ece7db;
+      color: #272922;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 16px 12px;
+    }
+
+    .taste-heading {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 800;
+      font-size: 19px;
+      line-height: 1.05;
+      letter-spacing: -0.4px;
+      text-transform: uppercase;
+      color: #22241e;
+    }
+
+    .taste-scallop-svg {
+      width: 100%;
+      height: 96px;
+      margin-top: auto;
+      overflow: visible;
+    }
+
+    /* 2. MAPLE STREET CARD (Oval photo inset + bold lower text) */
+    .card-inner.style-maple-street {
+      background: #ece7db;
+      color: #272922;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 12px 14px;
+      text-align: center;
+    }
+
+    .maple-oval-inset {
+      width: 88px;
+      height: 58px;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    .maple-oval-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .maple-desc {
+      font-size: 11.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.2px;
+      color: #2b2e25;
+      margin-bottom: 4px;
+    }
+
+    /* 3. CENTER PORTRAIT WITH FLOWER MASK */
+    .center-flower-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 66px;
+      height: 66px;
+      fill: #e8ecda;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+      pointer-events: none;
+    }
+
+    /* 4. 12K MOUNTAINS POSTER */
+    .card-inner.style-12k-poster {
+      background: #101116;
+    }
+
+    .badge-12k {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+      letter-spacing: -0.8px;
+    }
+
+    /* 5. SAGE SPLIT CARD (0034 - 0095) */
+    .card-inner.style-sage-split {
+      background: #2b3024;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .sage-left-photo {
+      width: 50%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .sage-right-numbers {
+      width: 50%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 16px 12px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 15px;
+      font-weight: 800;
+      color: #e4e7d8;
+    }
+
+    /* 6. 2026 NOV CARD */
+    .card-inner.style-nov-card {
+      background: #1b1e19;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+
+    .nov-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      pointer-events: none;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      color: #ffffff;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.8);
+    }
+
+    /* 7. NORTH AVE CARD */
+    .card-inner.style-north-ave {
+      background: #3c4233;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .north-inset {
+      width: 100%;
+      height: 135px;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .north-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .north-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #f0f3e6;
+      letter-spacing: -0.5px;
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    /* 8. THU 0316 AVE CARD */
+    .card-inner.style-thu-card {
+      background: #14151a;
+    }
+
+    .thu-top-badge {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .thu-bottom-title {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.85);
+    }
+
+    /* 9. BARCELONA SEVILLA CARD */
+    .card-inner.style-barcelona {
+      background: #18191f;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 14px;
+    }
+
+    .barcelona-main {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #e5e7eb;
+    }
+
+    .barcelona-sub {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #717684;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM UI LAYER WITH KEYFRAMES PILL
+    ------------------------------------------------------------- */
+    .ui-layer {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .keyframes-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px 9px 22px;
+      background: rgba(22, 23, 29, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 9999px;
+      color: #eaecef;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255,255,255,0.06);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .keyframes-pill:hover {
+      background: rgba(30, 32, 40, 0.98);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 35px -5px rgba(0, 0, 0, 0.75);
+    }
+
+    .keyframes-pill .icon-caret {
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .keyframes-pill.active .icon-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      position: absolute;
+      bottom: 66px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.96);
+      width: 440px;
+      max-width: calc(100vw - 32px);
+      background: rgba(18, 19, 25, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.88);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 99;
+    }
+
+    .controls-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-header h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h4 span {
+      font-size: 10px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #9aa0a6;
+    }
+
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #ccc;
+    }
+
+    .control-row input[type="range"] {
+      width: 180px;
+      accent-color: #ffffff;
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      color: #eee;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      color: #0b0c10;
+      font-weight: 700;
+      border-color: #fff;
+    }
+
+    .image-manager {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .image-manager textarea {
+      width: 100%;
+      height: 70px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 8px;
+      color: #eee;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      outline: none;
+    }
+
+    .hint-text {
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* TOP INSTRUCTION HINT */
+    .top-hint {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 40;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT COMPONENT NAVIGATION SIDEBAR -->
+  <aside class="sidebar">
+    <!-- 0. AI Catalog Hub -->
+    <a href="react-bits-catalog.html" class="nav-item" title="React Bits AI Catalog">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <span>AI Catalog</span>
+    </a>
+
+    <!-- 1. Sphere Wall -->
+    <a href="sphere-wall.html" class="nav-item" title="Sphere Wall">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="6" y="6" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="19" y="6" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="32" y="6" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="6" y="19" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="19" y="19" width="9" height="9" rx="2" fill="#fff"/>
+          <rect x="32" y="19" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="6" y="32" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="19" y="32" width="9" height="9" rx="2" fill="#777"/>
+          <rect x="32" y="32" width="9" height="9" rx="2" fill="#777"/>
+        </svg>
+      </div>
+      <span>Sphere Wall</span>
+    </a>
+
+    <!-- 2. Ring Carousel -->
+    <a href="ring-carousel.html" class="nav-item" title="Ring Carousel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <ellipse cx="24" cy="24" rx="18" ry="8" stroke="#777" stroke-width="1.8" fill="none"/>
+          <rect x="18" y="16" width="12" height="16" rx="2.5" fill="#fff"/>
+          <rect x="6" y="19" width="8" height="10" rx="1.5" fill="#555"/>
+          <rect x="34" y="19" width="8" height="10" rx="1.5" fill="#555"/>
+        </svg>
+      </div>
+      <span>Ring Carousel</span>
+    </a>
+
+    <!-- 3. Orbit Globe -->
+    <a href="orbit-globe.html" class="nav-item" title="Orbit Globe">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="14" stroke="#666" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <rect x="18" y="18" width="12" height="12" rx="3" fill="#fff"/>
+          <rect x="29" y="8" width="7" height="7" rx="1.5" fill="#888"/>
+          <rect x="10" y="29" width="7" height="7" rx="1.5" fill="#888"/>
+        </svg>
+      </div>
+      <span>Orbit Globe</span>
+    </a>
+
+    <!-- 4. Card Tunnel -->
+    <a href="card-tunnel.html" class="nav-item" title="Card Tunnel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="4" y="4" width="40" height="40" rx="3" stroke="#666" stroke-width="1.5"/>
+          <rect x="12" y="12" width="24" height="24" rx="2" stroke="#888" stroke-width="1.5"/>
+          <rect x="19" y="19" width="10" height="10" rx="1.5" fill="#fff"/>
+          <line x1="4" y1="4" x2="19" y2="19" stroke="#555" stroke-width="1.2"/>
+          <line x1="44" y1="4" x2="29" y2="19" stroke="#555" stroke-width="1.2"/>
+          <line x1="4" y1="44" x2="19" y2="29" stroke="#555" stroke-width="1.2"/>
+          <line x1="44" y1="44" x2="29" y2="29" stroke="#555" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <span>Card Tunnel</span>
+    </a>
+
+    <!-- 5. Spiral Stream (Active) -->
+    <a href="spiral-stream.html" class="nav-item active" title="Spiral Stream">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <!-- 3D Helical Ribbon Icon matching screenshot -->
+          <path d="M12 10 C 28 8, 36 14, 36 20 C 36 26, 12 24, 12 30 C 12 36, 28 40, 36 38" stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="10" y="18" width="8" height="11" rx="2" fill="#fff" transform="rotate(-12 14 23)"/>
+          <rect x="28" y="24" width="8" height="11" rx="2" fill="#888" transform="rotate(12 32 29)"/>
+          <rect x="22" y="8" width="8" height="11" rx="2" fill="#555" transform="rotate(6 26 13)"/>
+        </svg>
+      </div>
+      <span>Spiral Stream</span>
+    </a>
+  </aside>
+
+  <!-- TOP INSTRUCTION HINT -->
+  <div class="top-hint">
+    <span>Drag horizontally to rotate</span>
+    <span>•</span>
+    <span>Drag vertically or scroll to travel helix</span>
+    <span>•</span>
+    <span>Click card to center</span>
+  </div>
+
+  <!-- 3D VIEWPORT & STAGE -->
+  <main class="viewport" id="viewport">
+    <div class="spiral-portal" id="spiralPortal">
+      <div class="portal-vignette"></div>
+      <div class="spiral-stage" id="spiralStage">
+        <!-- 24 Helical Cards injected dynamically via JavaScript -->
+      </div>
+    </div>
+  </main>
+
+  <!-- BOTTOM UI LAYER WITH KEYFRAMES PILL -->
+  <div class="ui-layer">
+    <button class="keyframes-pill" id="keyframesToggle" aria-label="Toggle Spiral Controls">
+      <span>Keyframes</span>
+      <span class="icon-caret">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- CONTROLS PANEL DRAWER -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="panel-header">
+      <h4>Spiral Stream <span>3D Helix Engine</span></h4>
+      <button id="closePanelBtn" style="background:none; border:none; color:#777; cursor:pointer; font-size:16px;">✕</button>
+    </div>
+
+    <div class="control-row">
+      <label for="speedSlider">Flow Speed</label>
+      <input type="range" id="speedSlider" min="-8" max="8" step="0.5" value="1.2">
+    </div>
+
+    <div class="control-row">
+      <label for="radiusSlider">Helix Radius</label>
+      <input type="range" id="radiusSlider" min="200" max="400" step="5" value="265">
+    </div>
+
+    <div class="control-row">
+      <label for="pitchSlider">Vertical Pitch</label>
+      <input type="range" id="pitchSlider" min="30" max="100" step="2" value="50">
+    </div>
+
+    <div class="control-row">
+      <label for="coilsSlider">Coil Turns</label>
+      <input type="range" id="coilsSlider" min="1.5" max="4.0" step="0.1" value="2.4">
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="playPauseBtn">⏸ Pause</button>
+      <button class="btn" id="reverseBtn">⇄ Reverse</button>
+      <button class="btn" id="toggleStyleBtn">🎨 Toggle Style</button>
+    </div>
+
+    <div class="image-manager">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="font-size:12px; font-weight:600; color:#eee;">Update Images (Paste URLs)</label>
+        <span style="font-size:10px; color:#aaa;" id="cardCountLabel">24 cards</span>
+      </div>
+      <textarea id="imageInputArea" placeholder="Enter image URLs separated by commas or new lines..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="applyImagesBtn" style="flex:2;">Apply Images</button>
+        <button class="btn" id="presetMatchBtn" style="flex:1;">Exact Preset</button>
+      </div>
+      <p class="hint-text">💡 Or change the <code>const IMAGES = [...]</code> array in code on line 865!</p>
+    </div>
+  </div>
+
+  <!-- SVG Definition for Center Flower Mask Icon -->
+  <svg style="display:none;">
+    <defs>
+      <g id="flower-mask-icon">
+        <g fill="#e8ecda">
+          <circle cx="50" cy="22" r="9"/>
+          <circle cx="70" cy="30" r="9"/>
+          <circle cx="78" cy="50" r="9"/>
+          <circle cx="70" cy="70" r="9"/>
+          <circle cx="50" cy="78" r="9"/>
+          <circle cx="30" cy="70" r="9"/>
+          <circle cx="22" cy="50" r="9"/>
+          <circle cx="30" cy="30" r="9"/>
+          <circle cx="50" cy="50" r="14"/>
+          <circle cx="42" cy="38" r="9"/>
+          <circle cx="58" cy="38" r="9"/>
+          <circle cx="42" cy="62" r="9"/>
+          <circle cx="58" cy="62" r="9"/>
+        </g>
+        <circle cx="50" cy="50" r="3.5" fill="#202124"/>
+        <circle cx="42" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="42" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="26" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="74" r="2.8" fill="#202124"/>
+        <circle cx="26" cy="50" r="2.8" fill="#202124"/>
+        <circle cx="74" cy="50" r="2.8" fill="#202124"/>
+      </g>
+    </defs>
+  </svg>
+
+  <script>
+    // =========================================================================
+    // 🌟 1-LINE IMAGE CONFIG: CHANGE YOUR IMAGES HERE!
+    // Paste ANY image URLs (local paths or web links) into this array:
+    // =========================================================================
+    const IMAGES = [
+      "assets/warm_flower.jpg",
+      "assets/portrait_center.jpg",
+      "assets/mountain_sky.jpg",
+      "assets/flower_macro.jpg",
+      "assets/poppy_field.jpg",
+      "assets/madrid_arch.jpg",
+      "assets/moody_portrait.jpg",
+      "assets/forest_moss.jpg",
+      "assets/meadow_flowers.jpg"
+    ];
+
+    // =========================================================================
+    // EXACT SCREENSHOT TEMPLATES FOR SPIRAL STREAM
+    // =========================================================================
+    const SPIRAL_TEMPLATES = [
+      {
+        type: "ultimate-taste",
+        title1: "ULTIMATE",
+        title2: "TASTE"
+      },
+      {
+        type: "maple-street",
+        image: "assets/warm_flower.jpg",
+        text: "Maple Street is a<br>lovely avenue with<br>lush trees"
+      },
+      {
+        type: "center-man",
+        image: "assets/portrait_center.jpg"
+      },
+      {
+        type: "12k-poster",
+        image: "assets/mountain_sky.jpg",
+        badge: "12K"
+      },
+      {
+        type: "sage-split",
+        image: "assets/flower_macro.jpg",
+        numTop: "0034",
+        numBottom: "0095"
+      },
+      {
+        type: "nov-card",
+        image: "assets/poppy_field.jpg",
+        year: "2026",
+        month: "NOV"
+      },
+      {
+        type: "thu-card",
+        image: "assets/meadow_flowers.jpg",
+        badge: "THU",
+        title: "0316 AVE"
+      },
+      {
+        type: "barcelona",
+        title: "BARCELONA",
+        subtitle: "SEVILLA"
+      },
+      {
+        type: "north-ave",
+        image: "assets/forest_moss.jpg",
+        title: "north ave"
+      }
+    ];
+
+    // =========================================================================
+    // STATE & CONFIGURATION
+    // =========================================================================
+    let currentImages = [...IMAGES];
+    let isEditorialMode = true;
+    let isCustomImages = false;
+
+    const CARD_COUNT = 24;
+    let helixRadius = 265;
+    let verticalPitch = 50;
+    let coilTurns = 2.4;
+    let flowSpeed = 1.2;
+    let isFlowing = true;
+
+    // Camera / Angle orientation matching screenshot
+    const tiltX = 8.5;
+    const tiltY = -3.5;
+    const tiltZ = -3.0;
+
+    // Position state
+    let targetRotation = 0;
+    let currentRotation = 0;
+    let targetOffsetY = 0;
+    let currentOffsetY = 0;
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let velX = 0;
+    let velY = 0;
+
+    // Elements
+    const spiralPortal = document.getElementById('spiralPortal');
+    const spiralStage = document.getElementById('spiralStage');
+    const keyframesToggle = document.getElementById('keyframesToggle');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const pitchSlider = document.getElementById('pitchSlider');
+    const coilsSlider = document.getElementById('coilsSlider');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const reverseBtn = document.getElementById('reverseBtn');
+    const toggleStyleBtn = document.getElementById('toggleStyleBtn');
+    const imageInputArea = document.getElementById('imageInputArea');
+    const applyImagesBtn = document.getElementById('applyImagesBtn');
+    const presetMatchBtn = document.getElementById('presetMatchBtn');
+    const cardCountLabel = document.getElementById('cardCountLabel');
+
+    let helixCards = [];
+
+    // =========================================================================
+    // BUILD HELIX CARDS
+    // =========================================================================
+    function initSpiral() {
+      spiralStage.innerHTML = '';
+      helixCards = [];
+
+      const totalAngle = coilTurns * 2 * Math.PI;
+      const angleStep = totalAngle / CARD_COUNT;
+      const totalHeight = CARD_COUNT * verticalPitch;
+
+      for (let i = 0; i < CARD_COUNT; i++) {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'helix-card';
+        cardEl.dataset.index = i;
+
+        const innerEl = document.createElement('div');
+        innerEl.className = 'card-inner';
+
+        const template = SPIRAL_TEMPLATES[i % SPIRAL_TEMPLATES.length];
+        const imageSrc = currentImages[i % currentImages.length];
+
+        if (isEditorialMode) {
+          renderEditorialCard(innerEl, template, imageSrc, i);
+        } else {
+          renderCleanCard(innerEl, imageSrc, i);
+        }
+
+        cardEl.appendChild(innerEl);
+        spiralStage.appendChild(cardEl);
+
+        // Base geometric offsets (Card 0 is front-center at Y=0, ascending upwards to left)
+        const baseY = -i * verticalPitch;
+        const baseAngle = -i * angleStep;
+
+        helixCards.push({
+          el: cardEl,
+          inner: innerEl,
+          index: i,
+          baseY: baseY,
+          baseAngle: baseAngle,
+          template: template
+        });
+
+        // Click to center card
+        cardEl.addEventListener('click', (e) => {
+          if (Math.abs(velX) > 0.4 || Math.abs(velY) > 0.4) return;
+          focusCard(i);
+        });
+      }
+
+      cardCountLabel.textContent = `${CARD_COUNT} cards`;
+      imageInputArea.value = currentImages.join('\n');
+      updateHelixTransforms();
+    }
+
+    // Render Editorial Card
+    function renderEditorialCard(container, template, src, idx) {
+      const actualSrc = (isCustomImages ? src : (template.image || src)) || src;
+
+      if (template.type === 'ultimate-taste') {
+        container.className = 'card-inner style-ultimate-taste';
+        container.innerHTML = `
+          <div class="taste-heading">
+            ${template.title1}<br>${template.title2}
+          </div>
+          <svg class="taste-scallop-svg" viewBox="0 0 176 110">
+            <g fill="#49533a" stroke="#ece7db" stroke-width="4">
+              <!-- Row 1: Overlapping Scallop Arcs -->
+              <circle cx="22" cy="110" r="32"/>
+              <circle cx="66" cy="110" r="32"/>
+              <circle cx="110" cy="110" r="32"/>
+              <circle cx="154" cy="110" r="32"/>
+              <!-- Row 2: Staggered Arcs -->
+              <circle cx="44" cy="74" r="30"/>
+              <circle cx="88" cy="74" r="30"/>
+              <circle cx="132" cy="74" r="30"/>
+              <!-- Row 3: Top Wave Peak -->
+              <circle cx="66" cy="40" r="28"/>
+              <circle cx="110" cy="40" r="28"/>
+            </g>
+          </svg>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'maple-street') {
+        container.className = 'card-inner style-maple-street';
+        container.innerHTML = `
+          <div class="maple-oval-inset">
+            <img src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600'" alt="Flower">
+          </div>
+          <div class="maple-desc">${template.text}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'center-man') {
+        container.className = 'card-inner';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600'" alt="Portrait">
+          <svg class="center-flower-badge" viewBox="0 0 100 100">
+            <use href="#flower-mask-icon" />
+          </svg>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === '12k-poster') {
+        container.className = 'card-inner style-12k-poster';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600'" alt="12K Mountain">
+          <div class="badge-12k">${template.badge}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'sage-split') {
+        container.className = 'card-inner style-sage-split';
+        container.innerHTML = `
+          <img class="sage-left-photo" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=600'" alt="Macro">
+          <div class="sage-right-numbers">
+            <span>${template.numTop}</span>
+            <span>-</span>
+            <span>${template.numBottom}</span>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'nov-card') {
+        container.className = 'card-inner style-nov-card';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=600'" alt="Poppy field">
+          <div class="nov-overlay">
+            <span>${template.year}</span>
+            <span>${template.month}</span>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'thu-card') {
+        container.className = 'card-inner style-thu-card';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600'" alt="Meadow">
+          <div class="thu-top-badge">${template.badge}</div>
+          <div class="thu-bottom-title">${template.title}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'barcelona') {
+        container.className = 'card-inner style-barcelona';
+        container.innerHTML = `
+          <div class="barcelona-main">${template.title}</div>
+          <div class="barcelona-sub">${template.subtitle}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'north-ave') {
+        container.className = 'card-inner style-north-ave';
+        container.innerHTML = `
+          <div class="north-inset">
+            <img src="${actualSrc}" onerror="this.src='https://images.unsplash.com/photo-1448375240586-882707db888b?w=600'" alt="Forest">
+          </div>
+          <div class="north-title">${template.title}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else {
+        container.className = 'card-inner';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" alt="Photo ${idx+1}">
+          <div class="card-sheen"></div>
+        `;
+      }
+    }
+
+    // Clean Full Photo Mode
+    function renderCleanCard(container, src, index) {
+      container.className = 'card-inner';
+      container.innerHTML = `
+        <img class="card-img" src="${src}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600'" alt="Photo ${index + 1}">
+        <div class="card-sheen"></div>
+      `;
+    }
+
+    // =========================================================================
+    // 3D HELIX MATH & INFINITE LOOPING
+    // =========================================================================
+    function updateHelixTransforms() {
+      // Stage tilt for perspective dynamic angle
+      spiralStage.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg) rotateZ(${tiltZ}deg)`;
+
+      const totalHeight = CARD_COUNT * verticalPitch;
+      const totalAngle = coilTurns * 2 * Math.PI;
+      const anglePerHeight = totalAngle / totalHeight;
+
+      helixCards.forEach((card) => {
+        // Continuous infinite Y looping
+        let relY = (card.baseY + currentOffsetY) % totalHeight;
+        if (relY > totalHeight / 2) relY -= totalHeight;
+        if (relY < -totalHeight / 2) relY += totalHeight;
+
+        // Helix Angle synchronized with height & user rotation
+        const theta = relY * anglePerHeight + currentRotation;
+
+        // 3D coordinates on cylinder helix
+        const x = helixRadius * Math.sin(theta);
+        const z = helixRadius * Math.cos(theta);
+        const y = relY;
+
+        // Rotation: face outward from cylinder axis
+        const rotYDeg = -(theta * 180 / Math.PI);
+
+        // Apply 3D transform
+        card.el.style.transform = `
+          translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)
+          rotateY(${rotYDeg.toFixed(2)}deg)
+        `;
+
+        // Dynamic depth shading & dimming (matching screenshot)
+        // Foreground (z > 0): crisp, bright (1.0)
+        // Background (z < 0): softly dimmed (0.35 - 0.6)
+        const depthNorm = (z + helixRadius) / (2 * helixRadius); // 0 to 1
+        const brightness = Math.max(0.38, Math.min(1.0, 0.38 + depthNorm * 0.65));
+        const opacity = Math.max(0.55, Math.min(1.0, 0.55 + depthNorm * 0.5));
+
+        card.inner.style.setProperty('--card-brightness', brightness.toFixed(3));
+        card.inner.style.setProperty('--card-opacity', opacity.toFixed(3));
+      });
+    }
+
+    // Focus / bring a card front-and-center
+    function focusCard(index) {
+      const card = helixCards[index];
+      if (!card) return;
+
+      const totalHeight = CARD_COUNT * verticalPitch;
+      const totalAngle = coilTurns * 2 * Math.PI;
+      const anglePerHeight = totalAngle / totalHeight;
+
+      // Bring its Y to 0 and theta to 0 (front-center)
+      targetOffsetY = -card.baseY;
+      targetRotation = 0;
+    }
+
+    // =========================================================================
+    // ANIMATION & INTERACTION LOOP
+    // =========================================================================
+    function animate() {
+      if (!isDragging) {
+        if (isFlowing) {
+          // Continuous smooth spiral stream flow
+          targetRotation += flowSpeed * 0.004;
+          targetOffsetY += flowSpeed * (verticalPitch * 0.005);
+        }
+
+        // Apply drag inertia
+        targetRotation += velX;
+        targetOffsetY += velY;
+
+        velX *= 0.92;
+        velY *= 0.92;
+        if (Math.abs(velX) < 0.0001) velX = 0;
+        if (Math.abs(velY) < 0.001) velY = 0;
+      }
+
+      // Smooth interpolation
+      currentRotation += (targetRotation - currentRotation) * 0.08;
+      currentOffsetY += (targetOffsetY - currentOffsetY) * 0.08;
+
+      updateHelixTransforms();
+      requestAnimationFrame(animate);
+    }
+
+    // =========================================================================
+    // DRAG & SCROLL LISTENERS
+    // =========================================================================
+    spiralPortal.addEventListener('pointerdown', (e) => {
+      // Don't drag if clicking UI or inside drawer
+      if (e.target.closest('.controls-panel') || e.target.closest('.ui-layer')) return;
+
+      isDragging = true;
+      spiralPortal.setPointerCapture(e.pointerId);
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      velX = 0;
+      velY = 0;
+    });
+
+    spiralPortal.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+
+      const dx = e.clientX - lastDragX;
+      const dy = e.clientY - lastDragY;
+
+      // Horizontal drag rotates the helix
+      targetRotation += dx * 0.006;
+      velX = dx * 0.003;
+
+      // Vertical drag travels through the helix
+      targetOffsetY += dy * 1.4;
+      velY = dy * 0.6;
+
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+    });
+
+    function endDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try {
+        spiralPortal.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+
+    spiralPortal.addEventListener('pointerup', endDrag);
+    spiralPortal.addEventListener('pointercancel', endDrag);
+
+    // Mouse wheel scrolling
+    spiralPortal.addEventListener('wheel', (e) => {
+      if (e.target.closest('.controls-panel')) return;
+      e.preventDefault();
+
+      const delta = e.deltaY;
+      targetOffsetY -= delta * 0.9;
+      targetRotation -= delta * 0.0015;
+    }, { passive: false });
+
+    // Arrow keys
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowUp') {
+        targetOffsetY += 50;
+      } else if (e.key === 'ArrowDown') {
+        targetOffsetY -= 50;
+      } else if (e.key === 'ArrowLeft') {
+        targetRotation -= 0.15;
+      } else if (e.key === 'ArrowRight') {
+        targetRotation += 0.15;
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    });
+
+    // =========================================================================
+    // KEYFRAMES DRAWER CONTROLS
+    // =========================================================================
+    keyframesToggle.addEventListener('click', () => {
+      const isOpen = controlsPanel.classList.toggle('open');
+      keyframesToggle.classList.toggle('active', isOpen);
+    });
+
+    closePanelBtn.addEventListener('click', () => {
+      controlsPanel.classList.remove('open');
+      keyframesToggle.classList.remove('active');
+    });
+
+    function togglePlayPause() {
+      isFlowing = !isFlowing;
+      playPauseBtn.textContent = isFlowing ? '⏸ Pause' : '▶ Play';
+      playPauseBtn.classList.toggle('primary', !isFlowing);
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+
+    reverseBtn.addEventListener('click', () => {
+      flowSpeed = -flowSpeed;
+      speedSlider.value = flowSpeed;
+    });
+
+    toggleStyleBtn.addEventListener('click', () => {
+      isEditorialMode = !isEditorialMode;
+      initSpiral();
+    });
+
+    speedSlider.addEventListener('input', (e) => {
+      flowSpeed = parseFloat(e.target.value);
+    });
+
+    radiusSlider.addEventListener('input', (e) => {
+      helixRadius = parseFloat(e.target.value);
+      updateHelixTransforms();
+    });
+
+    pitchSlider.addEventListener('input', (e) => {
+      verticalPitch = parseFloat(e.target.value);
+      initSpiral();
+    });
+
+    coilsSlider.addEventListener('input', (e) => {
+      coilTurns = parseFloat(e.target.value);
+      initSpiral();
+    });
+
+    // Live Images Update
+    applyImagesBtn.addEventListener('click', () => {
+      const text = imageInputArea.value.trim();
+      if (!text) return;
+
+      const lines = text.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+      if (lines.length > 0) {
+        currentImages = lines;
+        isCustomImages = true;
+        initSpiral();
+      }
+    });
+
+    presetMatchBtn.addEventListener('click', () => {
+      currentImages = [...IMAGES];
+      isEditorialMode = true;
+      isCustomImages = false;
+      initSpiral();
+    });
+
+    // Initialize & Start
+    initSpiral();
+    animate();
+  </script>
+</body>
+</html>

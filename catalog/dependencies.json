@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-10-18T10:38:33.332Z",
+  "totalDistinctDependencies": 23,
+  "dependencies": {
+    "react": 550,
+    "motion": 90,
+    "matter-js": 1,
+    "gsap @gsap/react": 1,
+    "gsap": 1,
+    "tw-animate-css": 1,
+    "class-variance-authority": 25,
+    "lucide-react": 3,
+    "framer-motion": 1,
+    "shiki": 2,
+    "next-themes": 4,
+    "cobe": 1,
+    "react-tweet": 2,
+    "@radix-ui/react-icons": 6,
+    "canvas-confetti": 1,
+    "@types/canvas-confetti": 1,
+    "rough-notation": 2,
+    "clsx": 27,
+    "tailwind-merge": 3,
+    "@radix-ui/react-dialog": 1,
+    "@radix-ui/react-tabs": 1,
+    "@radix-ui/react-accordion": 1,
+    "@radix-ui/react-slot": 24
+  }
+}

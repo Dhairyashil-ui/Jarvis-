@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Sphere Wall - 3D UI Component</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* -------------------------------------------------------------
+       GLOBAL RESET & ROOT VARIABLES
+    ------------------------------------------------------------- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-color: #0b0c10;
+      --dot-color: rgba(255, 255, 255, 0.08);
+      --card-w: 205px;
+      --card-h: 245px;
+      --card-radius: 26px;
+      --sphere-radius: 860px;
+      --perspective: 1100px;
+      --sidebar-w: 110px;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      /* Subtle dot grid pattern matching screenshot */
+      background-image: radial-gradient(var(--dot-color) 1.25px, transparent 1.25px);
+      background-size: 26px 26px;
+      background-position: center center;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      display: flex;
+      position: relative;
+    }
+
+    /* -------------------------------------------------------------
+       LEFT COMPONENT NAVIGATION SIDEBAR (Matching Screenshot)
+    ------------------------------------------------------------- */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: rgba(14, 15, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 10px;
+      gap: 14px;
+      z-index: 50;
+      position: relative;
+    }
+
+    .nav-item {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px;
+      border-radius: 14px;
+      text-decoration: none;
+      color: #9094a0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      gap: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .nav-item:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      background: #191b22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-item.active .nav-icon {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: #20232c;
+    }
+
+    /* -------------------------------------------------------------
+       3D STAGE & SCENE
+    ------------------------------------------------------------- */
+    .viewport {
+      flex: 1;
+      height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: var(--perspective);
+      perspective-origin: 50% 50%;
+      cursor: grab;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    .viewport:active {
+      cursor: grabbing;
+    }
+
+    /* 3D Sphere Center Origin */
+    .sphere-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    /* -------------------------------------------------------------
+       SPHERICAL CARD SLOT & INNER
+    ------------------------------------------------------------- */
+    .sphere-slot {
+      position: absolute;
+      left: calc(var(--card-w) / -2);
+      top: calc(var(--card-h) / -2);
+      width: var(--card-w);
+      height: var(--card-h);
+      transform-style: preserve-3d;
+      backface-visibility: visible;
+      will-change: transform, filter, opacity;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--card-radius);
+      position: relative;
+      overflow: hidden;
+      backface-visibility: visible;
+      background: #14151b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 
+        0 18px 40px -10px rgba(0, 0, 0, 0.8),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.3s ease;
+      filter: brightness(var(--card-brightness, 1));
+      opacity: var(--card-opacity, 1);
+    }
+
+    .sphere-slot:hover .card-inner {
+      transform: scale(1.08) translateZ(16px);
+      box-shadow: 
+        0 30px 65px -8px rgba(0, 0, 0, 0.95),
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        0 0 25px rgba(255, 255, 255, 0.14);
+    }
+
+    /* Card photo layer */
+    .card-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      display: block;
+    }
+
+    .card-sheen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+      border-top-left-radius: var(--card-radius);
+      border-top-right-radius: var(--card-radius);
+    }
+
+    /* -------------------------------------------------------------
+       EXACT EDITORIAL CARD STYLES
+    ------------------------------------------------------------- */
+    /* 1. Center Man in Grass with Flower Mask */
+    .center-flower-badge {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 82px;
+      height: 82px;
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6));
+    }
+
+    /* 2. Olive "north ave" card */
+    .style-olive {
+      background-color: #5d674f;
+      display: flex;
+      flex-direction: column;
+      padding: 13px;
+    }
+    .style-olive .photo-inset {
+      width: 100%;
+      height: 145px;
+      background: #f2ede4;
+      border-radius: 16px;
+      padding: 6px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+    .style-olive .photo-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 11px;
+    }
+    .style-olive .olive-footer {
+      margin-top: auto;
+      padding: 4px 6px;
+    }
+    .style-olive .olive-footer h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #edebe4;
+      letter-spacing: -0.6px;
+    }
+
+    /* 3. Cream "Maple Street" card */
+    .style-cream {
+      background-color: #ede8dc;
+      color: #1e1f1c;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .style-cream .circle-inset {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-bottom: 12px;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+    .style-cream .circle-inset img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .style-cream .cream-text {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: #242422;
+      max-width: 140px;
+    }
+    .style-cream .cream-dash {
+      font-size: 20px;
+      margin-top: auto;
+      font-weight: 800;
+      color: #333;
+    }
+
+    /* 4. Sage "0034 - 0095" split card */
+    .style-sage-split {
+      background-color: #dce3d5;
+      color: #222520;
+      position: relative;
+    }
+    .style-sage-split .left-image-half {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 62%;
+      height: 100%;
+      object-fit: cover;
+      mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+      -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+    }
+    .style-sage-split .right-numbers {
+      position: absolute;
+      right: 16px;
+      top: 20px;
+      bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #1a1e17;
+    }
+
+    /* 5. Minimalist "BARCELONA" black card */
+    .style-barcelona {
+      background-color: #15161b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .style-barcelona .barcelona-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #f0f0f3;
+      text-transform: uppercase;
+    }
+
+    /* 6. "2026 NOV" sage badge card */
+    .style-nov2026 {
+      background-color: #5c6650;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      position: relative;
+    }
+    .style-nov2026 span {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      color: #edeae2;
+    }
+
+    /* 7. Semicircle scalloped pattern card */
+    .style-scallop {
+      background-color: #e6e9df;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+      position: relative;
+    }
+    .scallop-row {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .scallop-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #5d674f;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM "KEYFRAMES ^" PILL & CONTROL PANEL
+    ------------------------------------------------------------- */
+    .ui-layer {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .keyframes-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px 9px 22px;
+      background: rgba(22, 23, 29, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 9999px;
+      color: #eaecef;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255,255,255,0.06);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .keyframes-pill:hover {
+      background: rgba(30, 32, 40, 0.98);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 35px -5px rgba(0, 0, 0, 0.75);
+    }
+
+    .keyframes-pill .icon-caret {
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+    }
+
+    .keyframes-pill.active .icon-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      position: absolute;
+      bottom: 66px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px) scale(0.96);
+      width: 440px;
+      max-width: calc(100vw - 32px);
+      background: rgba(18, 19, 25, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.88);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 99;
+    }
+
+    .controls-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-header h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h4 span {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #aaa;
+      font-weight: 500;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      color: #c0c4ce;
+    }
+
+    .control-row input[type="range"] {
+      width: 170px;
+      accent-color: #ffffff;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: #eee;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      color: #0b0c10;
+      border-color: #ffffff;
+    }
+
+    .btn.primary:hover {
+      background: #e4e6ea;
+    }
+
+    .image-manager {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .image-manager textarea {
+      width: 100%;
+      height: 64px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #eee;
+      font-family: monospace;
+      font-size: 11px;
+      resize: vertical;
+      margin-top: 6px;
+      outline: none;
+    }
+
+    .hint-text {
+      font-size: 10.5px;
+      color: #7b808d;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .top-hint {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      :root {
+        --card-w: 165px;
+        --card-h: 205px;
+        --card-radius: 22px;
+        --sphere-radius: 650px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT COMPONENT NAVIGATION SIDEBAR -->
+  <aside class="sidebar">
+    <!-- 0. AI Catalog Hub -->
+    <a href="react-bits-catalog.html" class="nav-item" title="React Bits AI Catalog">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <span>AI Catalog</span>
+    </a>
+
+    <!-- 1. Sphere Wall (Active) -->
+    <a href="sphere-wall.html" class="nav-item active" title="Sphere Wall">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="5" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="6" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="7" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="4" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="15" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="15" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="4" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="14" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="25" y="25" width="9" height="8" rx="2" fill="#fff"/>
+          <rect x="36" y="25" width="8" height="7" rx="2" fill="#aaa"/>
+          <rect x="5" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+          <rect x="15" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="25" y="35" width="8" height="7" rx="2" fill="#bbb"/>
+          <rect x="35" y="35" width="8" height="6" rx="2" fill="#888" opacity="0.8"/>
+        </svg>
+      </div>
+      <span>Sphere Wall</span>
+    </a>
+
+    <!-- 2. Ring Carousel -->
+    <a href="ring-carousel.html" class="nav-item" title="Ring Carousel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <ellipse cx="24" cy="24" rx="18" ry="10" stroke="#777" stroke-width="2" stroke-dasharray="3 3"/>
+          <rect x="19" y="28" width="10" height="12" rx="2.5" fill="#fff"/>
+          <rect x="6" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="33" y="22" width="9" height="10" rx="2" fill="#aaa"/>
+          <rect x="12" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+          <rect x="29" y="13" width="7" height="8" rx="1.5" fill="#666"/>
+        </svg>
+      </div>
+      <span>Ring Carousel</span>
+    </a>
+
+    <!-- 3. Orbit Globe -->
+    <a href="orbit-globe.html" class="nav-item" title="Orbit Globe">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="14" stroke="#888" stroke-width="1.5"/>
+          <rect x="18" y="18" width="12" height="12" rx="3" fill="#fff" transform="rotate(15 24 24)"/>
+          <rect x="7" y="14" width="9" height="9" rx="2" fill="#aaa" transform="rotate(-20 11.5 18.5)"/>
+          <rect x="30" y="26" width="9" height="9" rx="2" fill="#ccc" transform="rotate(35 34.5 30.5)"/>
+        </svg>
+      </div>
+      <span>Orbit Globe</span>
+    </a>
+
+    <!-- 4. Totem Wall -->
+    <div class="nav-item" title="Totem Wall (Coming Soon)">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="8" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="8" y="32" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="20" y="2" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="20" y="17" width="8" height="13" rx="2" fill="#fff"/>
+          <rect x="20" y="33" width="8" height="12" rx="2" fill="#bbb"/>
+          <rect x="32" y="4" width="8" height="11" rx="2" fill="#777"/>
+          <rect x="32" y="18" width="8" height="11" rx="2" fill="#aaa"/>
+          <rect x="32" y="32" width="8" height="11" rx="2" fill="#777"/>
+        </svg>
+      </div>
+      <span>Totem Wall</span>
+    </div>
+
+    <!-- 5. Card Tunnel -->
+    <a href="card-tunnel.html" class="nav-item" title="Card Tunnel">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <rect x="4" y="4" width="40" height="40" rx="3" stroke="#888" stroke-width="1.8"/>
+          <rect x="12" y="12" width="24" height="24" rx="2" stroke="#bbb" stroke-width="1.8"/>
+          <rect x="19" y="19" width="10" height="10" rx="1.5" fill="#fff"/>
+          <line x1="4" y1="4" x2="19" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="4" x2="29" y2="19" stroke="#888" stroke-width="1.5"/>
+          <line x1="4" y1="44" x2="19" y2="29" stroke="#888" stroke-width="1.5"/>
+          <line x1="44" y1="44" x2="29" y2="29" stroke="#888" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span>Card Tunnel</span>
+    </a>
+
+    <!-- 6. Spiral Stream -->
+    <a href="spiral-stream.html" class="nav-item" title="Spiral Stream">
+      <div class="nav-icon">
+        <svg width="40" height="40" viewBox="0 0 48 48" fill="none">
+          <path d="M12 10 C 28 8, 36 14, 36 20 C 36 26, 12 24, 12 30 C 12 36, 28 40, 36 38" stroke="#888" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="10" y="18" width="8" height="11" rx="2" fill="#fff" transform="rotate(-12 14 23)"/>
+          <rect x="28" y="24" width="8" height="11" rx="2" fill="#888" transform="rotate(12 32 29)"/>
+          <rect x="22" y="8" width="8" height="11" rx="2" fill="#555" transform="rotate(6 26 13)"/>
+        </svg>
+      </div>
+      <span>Spiral Stream</span>
+    </a>
+  </aside>
+
+  <!-- TOP INSTRUCTION HINT -->
+  <div class="top-hint">
+    <span>Drag freely to pan in 3D</span>
+    <span>•</span>
+    <span>Scroll to rotate</span>
+    <span>•</span>
+    <span>Click any card to center</span>
+  </div>
+
+  <!-- 3D INTERACTIVE SPHERE VIEWPORT -->
+  <main class="viewport" id="viewport">
+    <div class="sphere-center" id="sphereCenter">
+      <!-- 3D Spherical cards matrix injected by JavaScript -->
+    </div>
+  </main>
+
+  <!-- BOTTOM UI LAYER WITH KEYFRAMES PILL -->
+  <div class="ui-layer">
+    <button class="keyframes-pill" id="keyframesToggle" aria-label="Toggle Sphere Controls">
+      <span>Keyframes</span>
+      <span class="icon-caret">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- CONTROLS PANEL DRAWER -->
+  <div class="controls-panel" id="controlsPanel">
+    <div class="panel-header">
+      <h4>Sphere Wall <span>3D Dome Engine</span></h4>
+      <button id="closePanelBtn" style="background:none; border:none; color:#777; cursor:pointer; font-size:16px;">✕</button>
+    </div>
+
+    <div class="control-row">
+      <label for="speedSlider">Auto Drift Speed</label>
+      <input type="range" id="speedSlider" min="-1.0" max="1.0" step="0.02" value="0.12">
+    </div>
+
+    <div class="control-row">
+      <label for="radiusSlider">Sphere Radius</label>
+      <input type="range" id="radiusSlider" min="600" max="1800" step="20" value="1150">
+    </div>
+
+    <div class="control-row">
+      <label for="perspectiveSlider">FOV / Perspective</label>
+      <input type="range" id="perspectiveSlider" min="600" max="2000" step="50" value="1200">
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="playPauseBtn">⏸ Pause</button>
+      <button class="btn" id="resetViewBtn">↺ Center View</button>
+      <button class="btn" id="toggleStyleBtn">🎨 Toggle Style</button>
+    </div>
+
+    <div class="image-manager">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label style="font-size:12px; font-weight:600; color:#eee;">Update Images (Paste URLs)</label>
+        <span style="font-size:10px; color:#aaa;" id="cardCountLabel">65 cards</span>
+      </div>
+      <textarea id="imageInputArea" placeholder="Enter image URLs separated by commas or new lines..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="applyImagesBtn" style="flex:2;">Apply Images</button>
+        <button class="btn" id="presetMatchBtn" style="flex:1;">Exact Preset</button>
+      </div>
+      <p class="hint-text">💡 Or change the <code>const IMAGES = [...]</code> array in code on line 426!</p>
+    </div>
+  </div>
+
+  <!-- SVG Definition for Center Flower Mask Icon -->
+  <svg style="display:none;">
+    <defs>
+      <g id="flower-mask-icon">
+        <g fill="#f5f0e6">
+          <circle cx="50" cy="22" r="9"/>
+          <circle cx="70" cy="30" r="9"/>
+          <circle cx="78" cy="50" r="9"/>
+          <circle cx="70" cy="70" r="9"/>
+          <circle cx="50" cy="78" r="9"/>
+          <circle cx="30" cy="70" r="9"/>
+          <circle cx="22" cy="50" r="9"/>
+          <circle cx="30" cy="30" r="9"/>
+          <circle cx="50" cy="50" r="14"/>
+          <circle cx="42" cy="38" r="9"/>
+          <circle cx="58" cy="38" r="9"/>
+          <circle cx="42" cy="62" r="9"/>
+          <circle cx="58" cy="62" r="9"/>
+        </g>
+        <circle cx="50" cy="50" r="3.5" fill="#202124"/>
+        <circle cx="42" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="38" r="2.8" fill="#202124"/>
+        <circle cx="42" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="58" cy="62" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="26" r="2.8" fill="#202124"/>
+        <circle cx="50" cy="74" r="2.8" fill="#202124"/>
+        <circle cx="26" cy="50" r="2.8" fill="#202124"/>
+        <circle cx="74" cy="50" r="2.8" fill="#202124"/>
+      </g>
+    </defs>
+  </svg>
+
+  <script>
+    // =========================================================================
+    // 🌟 1-LINE IMAGE CONFIG: CHANGE YOUR IMAGES HERE!
+    // Paste ANY image URLs (local paths or web links) into this array:
+    // =========================================================================
+    const IMAGES = [
+      "assets/portrait_center.jpg",
+      "assets/flower_macro.jpg",
+      "assets/madrid_arch.jpg",
+      "assets/poppy_field.jpg",
+      "assets/moody_portrait.jpg",
+      "assets/forest_moss.jpg",
+      "assets/mountain_sky.jpg",
+      "assets/warm_flower.jpg",
+      "assets/meadow_flowers.jpg"
+    ];
+
+    // =========================================================================
+    // EXACT SCREENSHOT CARD TEMPLATES & DESIGNS
+    // =========================================================================
+    const CARD_TEMPLATES = [
+      {
+        type: "center-man",
+        image: "assets/portrait_center.jpg",
+        fallback: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"
+      },
+      {
+        type: "olive-north-ave",
+        image: "assets/meadow_flowers.jpg",
+        title: "north ave",
+        fallback: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80"
+      },
+      {
+        type: "cream-maple",
+        image: "assets/warm_flower.jpg",
+        text: "Maple Street is a lovely avenue with lush trees",
+        fallback: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80"
+      },
+      {
+        type: "sage-split",
+        image: "assets/flower_macro.jpg",
+        numTop: "0034",
+        numBottom: "0095",
+        fallback: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800&q=80"
+      },
+      {
+        type: "barcelona",
+        title: "BARCELONA"
+      },
+      {
+        type: "nov2026",
+        text1: "2026",
+        text2: "NOV"
+      },
+      {
+        type: "scallop"
+      },
+      {
+        type: "photo-poppy",
+        image: "assets/poppy_field.jpg",
+        fallback: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&q=80"
+      },
+      {
+        type: "photo-arch",
+        image: "assets/madrid_arch.jpg",
+        fallback: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&q=80"
+      }
+    ];
+
+    // =========================================================================
+    // STATE & CONFIGURATION
+    // =========================================================================
+    let currentImages = [...IMAGES];
+    let isEditorialMode = true;
+    let autoSpeed = 0.08;
+    let isAutoDrifting = true;
+    let sphereRadius = 860;
+
+    // Viewport rotations (Euler angles)
+    let rotX = 0; // Pitch (up/down)
+    let rotY = 0; // Yaw (left/right)
+    let targetRotX = 0;
+    let targetRotY = 0;
+    let velX = 0;
+    let velY = 0;
+    let isDragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    let lastTime = 0;
+
+    // Precision spherical matrix: 5 rows x 24 columns = 120 cards forming a seamless 360 globe
+    const ROWS = [-36, -18, 0, 18, 36];
+    const COLS_COUNT = 24;
+
+    // DOM Elements
+    const viewport = document.getElementById('viewport');
+    const sphereCenter = document.getElementById('sphereCenter');
+    const keyframesToggle = document.getElementById('keyframesToggle');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const closePanelBtn = document.getElementById('closePanelBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const radiusSlider = document.getElementById('radiusSlider');
+    const perspectiveSlider = document.getElementById('perspectiveSlider');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    const toggleStyleBtn = document.getElementById('toggleStyleBtn');
+    const imageInputArea = document.getElementById('imageInputArea');
+    const applyImagesBtn = document.getElementById('applyImagesBtn');
+    const presetMatchBtn = document.getElementById('presetMatchBtn');
+    const cardCountLabel = document.getElementById('cardCountLabel');
+
+    let cardSlots = [];
+
+    // =========================================================================
+    // BUILD 3D SPHERE WALL GRID
+    // =========================================================================
+    function buildSphere() {
+      sphereCenter.innerHTML = '';
+      cardSlots = [];
+
+      const colStep = 360 / COLS_COUNT; // 15 degrees per column
+      let cardIdx = 0;
+
+      ROWS.forEach((lat, rowIndex) => {
+        // Precise row latitude alignment
+        for (let col = 0; col < COLS_COUNT; col++) {
+          const lon = col * colStep;
+          const slot = document.createElement('div');
+          slot.className = 'sphere-slot';
+          slot.dataset.lat = lat;
+          slot.dataset.lon = lon;
+          slot.dataset.index = cardIdx;
+
+          // Compute 3D spherical position on convex sphere surface
+          slot.style.transform = `rotateY(${lon}deg) rotateX(${lat}deg) translateZ(${sphereRadius}px)`;
+
+          const inner = document.createElement('div');
+          inner.className = 'card-inner';
+
+          const imageSrc = currentImages[cardIdx % currentImages.length];
+          const template = CARD_TEMPLATES[cardIdx % CARD_TEMPLATES.length];
+
+          if (isEditorialMode) {
+            renderEditorialCard(inner, template, imageSrc);
+          } else {
+            renderCleanCard(inner, imageSrc, cardIdx);
+          }
+
+          slot.appendChild(inner);
+
+          // Click to rotate directly to this card
+          slot.addEventListener('click', (e) => {
+            if (Math.hypot(velX, velY) > 0.05) return;
+            focusCard(lat, lon);
+          });
+
+          sphereCenter.appendChild(slot);
+          cardSlots.push({ slot, inner, lat, lon });
+          cardIdx++;
+        }
+      });
+
+      cardCountLabel.textContent = `${cardSlots.length} cards`;
+      imageInputArea.value = currentImages.join('\n');
+      updateSphereTransform();
+      updateDepthShading();
+    }
+
+    // Render Editorial Card Design
+    function renderEditorialCard(container, template, src) {
+      const actualSrc = src || template.image;
+
+      if (template.type === 'center-man') {
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='${template.fallback}'" alt="Center Portrait">
+          <svg class="center-flower-badge" viewBox="0 0 100 100">
+            <use href="#flower-mask-icon" />
+          </svg>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'olive-north-ave') {
+        container.className = 'card-inner style-olive';
+        container.innerHTML = `
+          <div class="photo-inset">
+            <img src="${actualSrc}" onerror="this.src='${template.fallback}'" alt="Meadow flowers">
+          </div>
+          <div class="olive-footer">
+            <h3>${template.title}</h3>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'cream-maple') {
+        container.className = 'card-inner style-cream';
+        container.innerHTML = `
+          <div class="circle-inset">
+            <img src="${actualSrc}" onerror="this.src='${template.fallback}'" alt="Circle photo">
+          </div>
+          <div class="cream-text">${template.text}</div>
+          <div class="cream-dash">-</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'sage-split') {
+        container.className = 'card-inner style-sage-split';
+        container.innerHTML = `
+          <img class="left-image-half" src="${actualSrc}" onerror="this.src='${template.fallback}'" alt="Blossom macro">
+          <div class="right-numbers">
+            <span>${template.numTop}</span>
+            <span>-</span>
+            <span>${template.numBottom}</span>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'barcelona') {
+        container.className = 'card-inner style-barcelona';
+        container.innerHTML = `
+          <div class="barcelona-title">${template.title}</div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'nov2026') {
+        container.className = 'card-inner style-nov2026';
+        container.innerHTML = `
+          <span>${template.text1}</span>
+          <span>${template.text2}</span>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else if (template.type === 'scallop') {
+        container.className = 'card-inner style-scallop';
+        container.innerHTML = `
+          <div class="scallop-row">
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+            <div class="scallop-dot"></div>
+          </div>
+          <div class="card-sheen"></div>
+        `;
+      }
+      else {
+        // Standard clean photography card
+        container.className = 'card-inner';
+        container.innerHTML = `
+          <img class="card-img" src="${actualSrc}" onerror="this.src='${template.fallback || ''}'" alt="Gallery Photo">
+          <div class="card-sheen"></div>
+        `;
+      }
+    }
+
+    // Clean Full Photo Mode
+    function renderCleanCard(container, src, index) {
+      container.className = 'card-inner';
+      container.innerHTML = `
+        <img class="card-img" src="${src}" onerror="this.src='https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80'" alt="Photo ${index + 1}">
+        <div class="card-sheen"></div>
+      `;
+    }
+
+    // =========================================================================
+    // 3D TRANSFORM & DEPTH SHADING
+    // =========================================================================
+    function updateSphereTransform() {
+      // Rotate the entire sphere center in 3D
+      sphereCenter.style.transform = `translateZ(${-sphereRadius}px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    }
+
+    function updateDepthShading() {
+      // Dynamic shading based on cosine angle of card relative to viewer's camera
+      cardSlots.forEach(({ inner, lat, lon }) => {
+        // World coordinates relative to camera (0, 0)
+        let deltaY = (rotY + lon) % 360;
+        if (deltaY < 0) deltaY += 360;
+        if (deltaY > 180) deltaY = 360 - deltaY;
+
+        let deltaX = Math.abs(rotX + lat);
+
+        // Angle distance from camera center
+        const radY = (deltaY * Math.PI) / 180;
+        const radX = (deltaX * Math.PI) / 180;
+        const cosDist = Math.cos(radY) * Math.cos(radX);
+
+        // Normalize factor 0 to 1
+        const depth = Math.max(0, (cosDist + 1) / 2);
+
+        // Lighting: front cards are crisp (1.0), edges darken smoothly to ~0.45
+        const brightness = 0.42 + 0.58 * depth;
+        const opacity = 0.7 + 0.3 * depth;
+
+        inner.style.setProperty('--card-brightness', brightness.toFixed(3));
+        inner.style.setProperty('--card-opacity', opacity.toFixed(3));
+      });
+    }
+
+    // Smoothly bring a clicked card to the front center
+    function focusCard(lat, lon) {
+      targetRotX = -lat;
+
+      let diffY = (-lon - targetRotY) % 360;
+      if (diffY > 180) diffY -= 360;
+      if (diffY < -180) diffY += 360;
+
+      targetRotY += diffY;
+      velX = 0;
+      velY = 0;
+    }
+
+    // =========================================================================
+    // ANIMATION & PHYSICS LOOP
+    // =========================================================================
+    function animate() {
+      if (!isDragging) {
+        if (isAutoDrifting) {
+          targetRotY += autoSpeed;
+        }
+
+        // Momentum inertia decay
+        if (Math.abs(velX) > 0.001 || Math.abs(velY) > 0.001) {
+          targetRotX += velX;
+          targetRotY += velY;
+          velX *= 0.94;
+          velY *= 0.94;
+        }
+
+        // Clamp vertical pitch tilt so sphere doesn't flip upside down
+        targetRotX = Math.max(-42, Math.min(42, targetRotX));
+      }
+
+      // Smooth lerp easing
+      rotX += (targetRotX - rotX) * 0.12;
+      rotY += (targetRotY - rotY) * 0.12;
+
+      updateSphereTransform();
+      updateDepthShading();
+
+      requestAnimationFrame(animate);
+    }
+
+    // =========================================================================
+    // 2-AXIS 3D DRAG GESTURES
+    // =========================================================================
+    viewport.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.controls-panel') || e.target.closest('.ui-layer') || e.target.closest('.sidebar')) return;
+
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      velX = 0;
+      velY = 0;
+      viewport.setPointerCapture(e.pointerId);
+    });
+
+    viewport.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+
+      const now = performance.now();
+      const dt = Math.max(1, now - lastTime);
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+
+      const sensitivity = 0.22;
+      targetRotY += dx * sensitivity;
+      targetRotX -= dy * sensitivity;
+
+      // Restrict pitch
+      targetRotX = Math.max(-42, Math.min(42, targetRotX));
+
+      rotY = targetRotY;
+      rotX = targetRotX;
+
+      velY = (dx / dt) * 8;
+      velX = -(dy / dt) * 8;
+
+      lastX = e.clientX;
+      lastY = e.clientY;
+      lastTime = now;
+      updateSphereTransform();
+    });
+
+    function endDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      try { viewport.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+
+    viewport.addEventListener('pointerup', endDrag);
+    viewport.addEventListener('pointercancel', endDrag);
+
+    // Mouse wheel rotation
+    window.addEventListener('wheel', (e) => {
+      if (e.target.closest('.controls-panel') || e.target.closest('.sidebar')) return;
+      e.preventDefault();
+      targetRotY -= Math.sign(e.deltaY) * 5;
+    }, { passive: false });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft') targetRotY -= 15;
+      else if (e.key === 'ArrowRight') targetRotY += 15;
+      else if (e.key === 'ArrowUp') targetRotX = Math.min(42, targetRotX + 10);
+      else if (e.key === 'ArrowDown') targetRotX = Math.max(-42, targetRotX - 10);
+      else if (e.key === ' ') {
+        e.preventDefault();
+        togglePlayPause();
+      }
+    });
+
+    // =========================================================================
+    // UI CONTROLS & "KEYFRAMES ^" TOGGLE
+    // =========================================================================
+    keyframesToggle.addEventListener('click', () => {
+      const isOpen = controlsPanel.classList.toggle('open');
+      keyframesToggle.classList.toggle('active', isOpen);
+    });
+
+    closePanelBtn.addEventListener('click', () => {
+      controlsPanel.classList.remove('open');
+      keyframesToggle.classList.remove('active');
+    });
+
+    function togglePlayPause() {
+      isAutoDrifting = !isAutoDrifting;
+      playPauseBtn.textContent = isAutoDrifting ? '⏸ Pause' : '▶ Play';
+      playPauseBtn.classList.toggle('primary', !isAutoDrifting);
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayPause);
+
+    speedSlider.addEventListener('input', (e) => {
+      autoSpeed = parseFloat(e.target.value);
+      if (!isAutoDrifting && autoSpeed !== 0) togglePlayPause();
+    });
+
+    radiusSlider.addEventListener('input', (e) => {
+      sphereRadius = parseInt(e.target.value, 10);
+      cardSlots.forEach(({ slot, lat, lon }) => {
+        slot.style.transform = `rotateY(${lon}deg) rotateX(${lat}deg) translateZ(${sphereRadius}px)`;
+      });
+      updateSphereTransform();
+    });
+
+    perspectiveSlider.addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--perspective', `${e.target.value}px`);
+    });
+
+    resetViewBtn.addEventListener('click', () => {
+      targetRotX = 0;
+      targetRotY = 0;
+      sphereRadius = 880;
+      radiusSlider.value = sphereRadius;
+      buildSphere();
+    });
+
+    toggleStyleBtn.addEventListener('click', () => {
+      isEditorialMode = !isEditorialMode;
+      toggleStyleBtn.textContent = isEditorialMode ? '🎨 Editorial Mode' : '🖼 Clean Photo Mode';
+      buildSphere();
+    });
+
+    applyImagesBtn.addEventListener('click', () => {
+      const raw = imageInputArea.value.trim();
+      if (!raw) return;
+      const lines = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        currentImages = lines;
+        buildSphere();
+      }
+    });
+
+    presetMatchBtn.addEventListener('click', () => {
+      currentImages = [...IMAGES];
+      isEditorialMode = true;
+      toggleStyleBtn.textContent = '🎨 Toggle Style';
+      buildSphere();
+    });
+
+    // Initialize
+    buildSphere();
+    animate();
+  </script>
+</body>
+</html>

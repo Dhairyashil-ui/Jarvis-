@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ui-universe.dev/schemas/section.schema.json",
+  "title": "UIUniverseSection",
+  "description": "Normalized metadata schema for reusable website sections",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "category",
+    "description",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^section\\.[a-z0-9_-]+\\.[a-z0-9_-]+\\.v[0-9]+$",
+      "description": "Deterministic stable unique identifier for section"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "hero",
+        "navigation",
+        "features",
+        "bento",
+        "showcase",
+        "social-proof",
+        "testimonials",
+        "pricing",
+        "stats",
+        "faq",
+        "cta",
+        "footer",
+        "gallery",
+        "contact",
+        "team",
+        "process"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "defaultProps": {
+      "type": "object"
+    },
+    "supportedComponents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "templateSource": {
+      "type": "string"
+    },
+    "license": {
+      "type": "object"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["verified", "adapted", "reference"]
+    }
+  }
+}
